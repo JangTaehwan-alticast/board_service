@@ -1,0 +1,286 @@
+swagger: "2.0"
+info:
+  version: v1.0.0
+  title: Backend-Board-Service API
+  contact:
+    email: "trdev1@alticast.com"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+basePath: /board-service/v1
+tags:
+  - name: "board"
+    description: "게시판 글 조회/등록/수정/삭제"
+  - name: "comment"
+    description: "댓글 등록/수정/삭제"
+schemes:
+  - "https"
+  - "http"
+paths:
+  /board:
+    get:
+      tags:
+        - "board"
+      summary: "게시글 조회"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          name: "postId"
+          type: "string"
+          description: "조회하고자 하는 글의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "해당 게시글 반환"
+          schema:
+            $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+    post:
+      tags:
+        - "board"
+      summary: "게시판 글 작성"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "postDate는 게시일자로 별도 지정하지 않을 경우 게시는 작성일을 기준으로 함"
+          required: true
+          schema:
+            $ref: "./board/board.yaml#/definitions/Board"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./error/error.yaml#/definitions/OK"
+        "405":
+          description: "body 값 누락으로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidInput"
+    patch:
+      tags:
+        - "board"
+      summary: "게시판 글 수정"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          type: string
+          name: "postId"
+          description : "수정할 글의 아이디"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "body에서 변경 필드만 수정하여 전달"
+          required: true
+          schema:
+            $ref: "./board/board.yaml#/definitions/ModifyBoard"
+      responses:
+        "200":
+          description: "Ok"
+          schema:
+            $ref: "./board/board.yaml#/definitions/ResponseModifyBoardResult"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+        "405":
+          description: "body 값 누락으로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidInput"
+    delete:
+      tags:
+        - "board"
+      summary: "작성된 글 삭제"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          type: "string"
+          name: "postId"
+          description: "삭제하고자 하는 글의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./error/error.yaml#/definitions/OK"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+  /board/list:
+    get:
+      tags:
+        - "board"
+      summary: "카테고리/검색별 리스트 조회"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          type: "string"
+          name: "field"
+          description: "검색하고자 하는 필드 설정 \n
+        - all: 모든 글 기준 (default) \n
+        - category: 카테고리 기준 \n
+        - nickName: 작성자 기준\n
+        - title: 제목 기준 \n
+        - contents: 내용 기준"
+          required: true
+        - in: "query"
+          type: "string"
+          name: "value"
+          description: "필드에 해당하는 검색어 (default:all)"
+          required: true
+        - in: "query"
+          type: integer
+          name: "size"
+          description: "페이지 사이즈 (default:10)"
+          required: true
+        - in: "query"
+          type: integer
+          name: "paging"
+          description: "조회 page (default:1)"
+          required: true
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "./board/board.yaml#/definitions/ResponseBoardListResult"
+        "500":
+          description: "내부 서버 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InternalServer"
+
+  /board/comment:
+    post:
+      tags:
+        - "comment"
+      summary: "댓글 등록"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          schema:
+            $ref: "./comment/comment.yaml#/definitions/Comment"
+          required: true
+      responses:
+        "200":
+          description: "작성된 댓글 반환"
+          schema:
+            $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+        "405":
+          description: "body 값 누락으로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidInput"
+    patch:
+      tags:
+        - "comment"
+      summary: "댓글 수정"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          schema:
+            $ref: "./comment/comment.yaml#/definitions/ModifyComment"
+          required: true
+      responses:
+        "200":
+          description: "수정된 댓글 반환"
+          schema:
+            $ref: "./comment/comment.yaml#/definitions/ResponseModifyCommentResult"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+        "405":
+          description: "body 값 누락으로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidInput"
+    delete:
+      tags:
+        - "comment"
+      summary: "작성된 댓글 삭제"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          type: "string"
+          name: "commentId"
+          description: "삭제하고자 하는 댓글의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./error/error.yaml#/definitions/OK"
+        "400":
+          description: "잘못된 게시글 아이디로 발생되는 에러"
+          schema:
+            $ref: "./error/error.yaml#/definitions/InvalidID"
+
+definitions:
+
+  Board:
+    $ref: "./board/board.yaml#/definitions/Board"
+  ResponseBoard:
+    $ref: "./board/board.yaml#/definitions/ResponseBoard"
+  ResponseBoardResult:
+    $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
+
+  ResponseBoardListResult:
+    $ref: "./board/board.yaml#/definitions/ResponseBoardListResult"
+
+  ModifyBoard:
+    $ref: "./board/board.yaml#/definitions/ModifyBoard"
+  ResponseModifyBoard:
+    $ref: "./board/board.yaml#/definitions/ResponseModifyBoard"
+  ResponseModifyBoardResult:
+    $ref: "./board/board.yaml#/definitions/ResponseModifyBoardResult"
+
+  Comment:
+    $ref: "./comment/comment.yaml#/definitions/Comment"
+  ResponseComment:
+    $ref: "./comment/comment.yaml#/definitions/ResponseComment"
+  ResponseCommentResult:
+    $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
+
+  ModifyComment:
+    $ref: "./comment/comment.yaml#/definitions/ModifyComment"
+  ResponseModifyCommentResult:
+    $ref: "./comment/comment.yaml#/definitions/ResponseModifyCommentResult"
+
+
+  InvalidID:
+    $ref: "./error/error.yaml#/definitions/InvalidID"
+  InvalidInput:
+    $ref: "./error/error.yaml#/definitions/InvalidInput"
+  InternalServer:
+    $ref: "./error/error.yaml#/definitions/InternalServer"
+
+
+externalDocs:
+  description: "Find out more about Swagger"
+  url: "http://swagger.io"

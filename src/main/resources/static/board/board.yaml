@@ -1,0 +1,226 @@
+definitions:
+  Board:
+    properties:
+      nickName:
+        type: string
+        description: "작성자 닉네임"
+      title:
+        type: string
+        description: "게시글 제목"
+      contents:
+        type: string
+        description: "게시글 내용"
+      category:
+        type: string
+        description: "카테고리 default all"
+      postDate:
+        type: string
+        example: "yyyy-MM-dd HH:mm:ss"
+        description: "게시 일자 (optional default today)"
+      history:
+        type: array
+        description: "수정 버전"
+        items:
+          $ref: "#/definitions/History"
+      comment:
+        type: array
+        description: "댓글"
+        items:
+          $ref: "../comment/comment.yaml#/definitions/Comment"
+  ResponseBoardResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        description: "결과값"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseBoard"
+  ResponseBoard:
+    properties:
+      postId:
+        type: string
+        description: "게시글 아이디"
+      nickName:
+        type: string
+        description: "작성자 닉네임"
+      title:
+        type: string
+        description: "제목"
+      conetents:
+        type: string
+        description: "게시글 내용"
+      category:
+        type: string
+        description: "카테고리"
+      delYn:
+        type: string
+        description: "삭제여부"
+      regDate:
+        type: string
+        description: "작성일"
+      postDate:
+        type: string
+        description: "게시일"
+      history:
+        type: array
+        description: "수정 버전 정보"
+      comment:
+        type: array
+        description: "댓글"
+        items:
+          $ref: "../comment/comment.yaml#/definitions/Comment"
+    example:
+      postId: 001
+      nickName: "장태환"
+      title: "원하는 글의 제목"
+      contents: "원하는 글의 내용"
+      category: "all"
+      postDate: "2021-11-15 16:00:00"
+      history:
+        - "version": 1.0
+          "postId": 해당 버전의 게시글 아이디
+          "modifiedDate": "2021-11-15 16:00:00"
+          "modifier": "수정한 사람"
+        - "version": 1.1
+          "postId": 해당 버전의 게시글 아이디
+          "modifiedDate": "2021-11-16 16:00:00"
+          "modifier": "수정한 사람2"
+      comment:
+        - "nickName" : "user1"
+          "contents" : "댓글 내용"
+        - "nickName" : "user2"
+          "contents" : "댓글 내용"
+  History:
+    properties:
+      versionId:
+        type: string
+        description: "수정 버전의 아이디"
+      postID:
+        type: string
+        description: "수정 버전 게시글의 아이디"
+      modifiedDate:
+        type: string
+        description: "수정일자"
+        example: "yyyy-MM-dd HH:mm:ss"
+      modifier:
+        type: string
+        description: "수정한 사람"
+  ResponseBoardListResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        description: "결과값"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseBoardList"
+  ResponseBoardList:
+    properties:
+      postId:
+        type: string
+        description: "게시글 아이디"
+      nickName:
+        type: string
+        description: "작성자 닉네임"
+      title:
+        type: string
+        description: "제목"
+      category:
+        type: string
+        description: "카테고리"
+      postDate:
+        type: string
+        description: "게시일"
+      comments:
+        type: integer
+        description: "댓글수"
+    example:
+      - postId: 004
+        nickName: "장태환1"
+        title: "제목1"
+        contents: "내용1"
+        category: "all"
+        postDate: "2021-11-15 16:00:00"
+        comment: 10
+
+      - postId: 002
+        nickName: "장태환2"
+        title: "제목2"
+        contents: "내용2"
+        category: "info"
+        postDate: "2021-11-12 16:00:00"
+        comment: 11
+  ModifyBoard:
+    properties:
+      postId:
+        type: string
+        description: "수정할 게시글의 아이디"
+      title:
+        type: string
+        description: "수정할 게시글의 제목"
+      contents:
+        type: string
+        description: "수정할 게시글의 내용"
+      modifier:
+        type: string
+        description: "수정한 사람"
+      modifiedDate:
+        type: string
+        description: "수정일자"
+    example:
+      postId: 3
+      title: "수정할 제목"
+      contents: "수정할 내용"
+      modifier: "수정한 사람"
+  ResponseModifyBoardResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        description: "결과값"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseModifyBoard"
+  ResponseModifyBoard:
+    properties:
+      schema:
+        $ref: "#/definitions/ResponseBoard"
+    example:
+      postId: 001
+      nickName: "장태환"
+      title: "수정된 글의 제목"
+      contents: "수정된 글의 내용"
+      category: "all"
+      postDate: "2021-11-15"
+      history:
+        - "version": 1.1
+          "postId": 해당 버전의 게시글 아이디
+          "modifiedDate": "2021-11-17 16:00:00"
+          "modifier": "수정한 사람2"
+      comment:
+        - "nickName" : "user1"
+          "contents" : "댓글 내용"
+        - "nickName" : "user2"
+          "contents" : "댓글 내용"

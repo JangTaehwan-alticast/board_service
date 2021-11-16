@@ -1,0 +1,96 @@
+definitions:
+  Comment:
+    required:
+      - targetId
+      - nickName
+      - contents
+    properties:
+      targetId:
+        type: string
+        description: "댓글 대상 게시글 아이디"
+      nickName:
+        type: string
+        description: "작성자 닉네임"
+      contents:
+        type: string
+        description: "댓글 내용"
+  ResponseCommentResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        description: "결과값"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseComment"
+  ResponseComment:
+    properties:
+      commentId:
+        type: string
+        description: "댓글 아이디"
+      targetId:
+        type: string
+        description: "댓글 대상 게시글 아이디"
+      nickName:
+        type: string
+        description: "작성자 닉네임"
+      contents:
+        type: string
+        description: "댓글 내용"
+      postDate:
+        type: string
+        description: "댓글 작성일"
+    example:
+      commentId: "5"
+      targetId: "2"
+      nickName: "user123"
+      contents: "내용입니다"
+      postDate: "2021-11-15 16:00"
+  ModifyComment:
+    properties:
+      commentId:
+        type: string
+        description: "댓글의 아이디"
+      targetId:
+        type: string
+        description: "댓글 대상 게시글 아이디"
+      contents:
+        type: string
+        description: "수정 할 댓글 내용"
+    example:
+      commentId: "66"
+      targetId: "2"
+      contents: "수정할 댓글의 내용"
+  ResponseModifyCommentResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        description: "결과값"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseModifyComment"
+  ResponseModifyComment:
+    properties:
+      schema:
+        $ref: "#/definitions/ModifyComment"
+    example:
+      commentId: "66"
+      targetId: "2"
+      nickName: "댓글작성자"
+      contents: "수정된 댓글의 내용"
+      modifiedDate: "2021-11-16 16:00:31"

@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+default:
+  language: en #다국어 반환 시 적용되는 기본언어
+
+spring:
+  data:
+    mongodb:
+     uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+  application:
+    name: parking-service
+
+logging:
+  level:
+    org:
+      springframework:
+        data:
+          mongodb:
+            core:
+              MongoTemplate: DEBUG
+
+info:
+  app:
+    name: Board Service
+    description: Board Service
+    test : local
+    version: 1.0.0

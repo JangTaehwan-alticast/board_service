@@ -1,0 +1,41 @@
+definitions:
+  OK:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "ok"
+  InvalidID:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 400
+      message:
+        type: string
+        description: "응답메세지"
+        example: "Invalid ID Error"
+  InvalidInput:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 405
+      message:
+        type: string
+        description: "응답메세지"
+        example: "Invalid input Error"
+  InternalServer:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 500
+      message:
+        type: string
+        description: "응답메세지"
+        example: "Internal Server Error"
