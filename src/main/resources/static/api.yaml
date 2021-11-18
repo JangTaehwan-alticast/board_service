@@ -13,34 +13,105 @@ tags:
     description: "게시판 글 조회/등록/수정/삭제"
   - name: "comment"
     description: "댓글 등록/수정/삭제"
+  - name: "management"
+    description: "게시판 관리"
 schemes:
-  - "https"
+#  - "https"
   - "http"
+securityDefinitions:
+  ApiKeyAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+security:
+  - ApiKeyAuth: []
+
 paths:
   /board:
     get:
       tags:
         - "board"
-      summary: "게시글 조회"
+      summary: "각 조건에 맞는 검색결과 조회"
+      description: "조건에 부합하는 Board 게시글 조회, 별도 조건이 없을경우 전체 조회\n
+        [필드명 검색 조건 참고사항] - 각 필드의 value 부분에 아래 조건을 참고하여 검색을 시도 한다.\n
+        - eq?{value} -> value값과 일치하는 것 (value 에 null 로 입력시 해당 필드가 null인 상태를 검색)\n
+        - ne?{value} -> value값이 아닌 것 (value 에 null 로 입력시 해당 필드가 null이 아닌 상태를 검색)\n
+        - lt?{value} -> value보다 작은 것\n
+        - le?{value} -> value보다 같거나 작은 것\n
+        - gt?{value} -> value보다 큰 것 \n
+        - ge?{value} -> value보다 같거나 큰 것 \n
+        - in?{value1},{value2},{value3} -> value들이 포함된 것 \n
+        - nin?{value1},{value2},{value3} -> value들이 포함되지 않은 것 \n
+        - like?{value} -> value와 일부 일치하는 것\n\n
+        [q 검색 조건 참고사항]\n
+        - value 부분에 {대상필드}%{필터조건}?검색어 순으로 입력하고, 다중 조건의 검색이 필요한 경우 ','구분자를 이용한다.\n
+        - 참고1) null인 값을 조회 - {필드명}%eq?null 로 입력하여 검색한다.\n
+        - 참고2) null이 아닌 값을 조회 - {필드명}%ne?null 로 입력하여 검색한다.\n
+        - ex) 필드명1%in?값1,값2,값3,필드명2%eq?값1,필드명3%eq?null\n\n
+        [검색 시 주의사항]\n
+        - 하나의 필드에 대해 q 검색과 필드명 검색 조건을 중복하여 넣지 않는다.\n\n
+        [참고사항]\n
+        - 범위(BETWEEN) 검색 필요시 le 와 ge를 활용한다. 아래 가입일시 0 ~ 99999 사이 검색 예제 참고\n
+        - ?createdDate=ge?0&createdDate=le?99999\n
+        - comments 는 default 로 10개의 결과를 반환하며 /board/comment/{postId} 로 paging 이 가능하다. \n"
       consumes:
         - "application/json"
       produces:
         - "application/json"
       parameters:
         - in: "query"
-          name: "postId"
           type: "string"
-          description: "조회하고자 하는 글의 아이디"
-          required: true
+          name: "postId"
+          description: "게시글의 postId 기준 검색(단건조회)"
+        - in: "query"
+          type: "string"
+          name: "category"
+          description: "카테고리 기준 검색"
+        - in: "query"
+          type: "string"
+          name: "nickName"
+          description: "작성자의 닉네임 기준 검색"
+        - in: "query"
+          type: "string"
+          name: "title"
+          description: "제목 기준 검색"
+        - in: "query"
+          type: "string"
+          name: "contents"
+          description: "내용 기준 검색"
+        - in: "query"
+          type: "string"
+          name: "q"
+          description: "q 검색 조건 참고"
+        - in: "query"
+          type: number
+          name: "page"
+          description: "페이지 (default:1)"
+        - in: "query"
+          type: number
+          name: "size"
+          description: "페이지 사이즈 (default:10)"
       responses:
         "200":
-          description: "해당 게시글 반환"
+          description: "return board"
           schema:
             $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
-        "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
+            $ref: "./code/code.yaml#/definitions/204Error"
+        "400":
+          description: "Invalid Parameter"
+          schema:
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
     post:
       tags:
         - "board"
@@ -52,7 +123,7 @@ paths:
       parameters:
         - in: "body"
           name: "body"
-          description: "postDate는 게시일자로 별도 지정하지 않을 경우 게시는 작성일을 기준으로 함"
+          description: "exposureDate는 게시일자로 별도 지정하지 않을 경우 게시는 작성일을 기준으로 노출"
           required: true
           schema:
             $ref: "./board/board.yaml#/definitions/Board"
@@ -60,11 +131,51 @@ paths:
         "200":
           description: "ok"
           schema:
-            $ref: "./error/error.yaml#/definitions/OK"
-        "405":
-          description: "body 값 누락으로 발생되는 에러"
+            $ref: "./board/board.yaml#/definitions/ResponseCreateBoardResult"
+        "400":
+          description: "Invalid Parameter"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidInput"
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
+  /board/{postId}:
+    get:
+      tags:
+        - "board"
+      summary: "게시글 조회"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "postId"
+          type: "string"
+          description: "조회하고자 하는 글의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "해당 게시글 반환"
+          schema:
+            $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
+        "400":
+          description: "Invalid Parameter Error Check Message"
+          schema:
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
     patch:
       tags:
         - "board"
@@ -74,10 +185,10 @@ paths:
       produces:
         - "application/json"
       parameters:
-        - in: "query"
+        - in: "path"
           type: string
           name: "postId"
-          description : "수정할 글의 아이디"
+          description: "수정할 글의 아이디"
           required: true
         - in: "body"
           name: "body"
@@ -91,82 +202,99 @@ paths:
           schema:
             $ref: "./board/board.yaml#/definitions/ResponseModifyBoardResult"
         "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
+          description: "Invalid Parameter"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
-        "405":
-          description: "body 값 누락으로 발생되는 에러"
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidInput"
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
     delete:
-      tags:
-        - "board"
-      summary: "작성된 글 삭제"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "query"
-          type: "string"
-          name: "postId"
-          description: "삭제하고자 하는 글의 아이디"
-          required: true
-      responses:
-        "200":
-          description: "ok"
-          schema:
-            $ref: "./error/error.yaml#/definitions/OK"
-        "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
-          schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
-  /board/list:
+        tags:
+          - "board"
+        summary: "작성된 글 삭제"
+        consumes:
+          - "application/json"
+        produces:
+          - "application/json"
+        parameters:
+          - in: "path"
+            type: "string"
+            name: "postId"
+            description: "삭제하고자 하는 글의 아이디"
+            required: true
+        responses:
+          "200":
+            description: "ok"
+            schema:
+              $ref: "./code/code.yaml#/definitions/OK"
+          "400":
+            description: "Invalid Parameter"
+            schema:
+              $ref: "./code/code.yaml#/definitions/400Error"
+          "404":
+            description: "Invalid Request"
+            schema:
+              $ref: "./code/code.yaml#/definitions/404Error"
+          "500":
+            description: "Internal Server Error"
+            schema:
+              $ref: "./code/code.yaml#/definitions/InternalServer"
+#  /board/restore:
+#    post:
+#      tag:
+#        - "management"
+#      summary: "삭제된 글 복원"
+#      produces:
+#        - "application/json"
+#      parameters:
+#        - in: "query"
+#          type: "string"
+#          name: "postId"
+#          description: "복원하고자 하는 글의 아이디"
+#          required: true
+  /board/comment/{postId}:
     get:
       tags:
-        - "board"
-      summary: "카테고리/검색별 리스트 조회"
-      consumes:
-        - "application/json"
+        - "comment"
+      summary: "댓글 조회"
       produces:
         - "application/json"
       parameters:
-        - in: "query"
-          type: "string"
-          name: "field"
-          description: "검색하고자 하는 필드 설정 \n
-        - all: 모든 글 기준 (default) \n
-        - category: 카테고리 기준 \n
-        - nickName: 작성자 기준\n
-        - title: 제목 기준 \n
-        - contents: 내용 기준"
+        - in: path
+          type: string
+          name: "postId"
+          description: "댓글 대상 게시글 아이디"
           required: true
-        - in: "query"
-          type: "string"
-          name: "value"
-          description: "필드에 해당하는 검색어 (default:all)"
-          required: true
-        - in: "query"
-          type: integer
+        - in: query
+          type: number
+          name: "page"
+          description: "페이지"
+        - in: query
+          type: number
           name: "size"
-          description: "페이지 사이즈 (default:10)"
-          required: true
-        - in: "query"
-          type: integer
-          name: "paging"
-          description: "조회 page (default:1)"
-          required: true
+          description: "사이즈"
       responses:
         "200":
-          description: "successful operation"
+          description: "return content"
           schema:
-            $ref: "./board/board.yaml#/definitions/ResponseBoardListResult"
+            $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
+        "400":
+          description: "Invalid Parameter"
+          schema:
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
         "500":
-          description: "내부 서버 에러"
+          description: "Internal Server Error"
           schema:
-            $ref: "./error/error.yaml#/definitions/InternalServer"
-
-  /board/comment:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
     post:
       tags:
         - "comment"
@@ -174,6 +302,11 @@ paths:
       produces:
         - "application/json"
       parameters:
+        - in: path
+          type: string
+          name: "postId"
+          description: "댓글 대상 게시글 아이디"
+          required: true
         - in: "body"
           name: "body"
           schema:
@@ -181,17 +314,22 @@ paths:
           required: true
       responses:
         "200":
-          description: "작성된 댓글 반환"
+          description: "return content"
           schema:
             $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
         "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
+          description: "Invalid Parameter"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
-        "405":
-          description: "body 값 누락으로 발생되는 에러"
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidInput"
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
+  /board/comment/{commentId}:
     patch:
       tags:
         - "comment"
@@ -199,6 +337,11 @@ paths:
       produces:
         - "application/json"
       parameters:
+        - in: path
+          name: "commentId"
+          type: string
+          description: "댓글의 아이디"
+          required: true
         - in: "body"
           name: "body"
           schema:
@@ -206,17 +349,21 @@ paths:
           required: true
       responses:
         "200":
-          description: "수정된 댓글 반환"
+          description: "return contents"
           schema:
             $ref: "./comment/comment.yaml#/definitions/ResponseModifyCommentResult"
         "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
+          description: "Invalid Parameter"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
-        "405":
-          description: "body 값 누락으로 발생되는 에러"
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidInput"
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
     delete:
       tags:
         - "comment"
@@ -226,32 +373,40 @@ paths:
       produces:
         - "application/json"
       parameters:
-        - in: "query"
-          type: "string"
+        - in: path
           name: "commentId"
-          description: "삭제하고자 하는 댓글의 아이디"
+          type: string
+          description: "삭제하려는 댓글의 아이디"
           required: true
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "./error/error.yaml#/definitions/OK"
+            $ref: "./code/code.yaml#/definitions/OK"
         "400":
-          description: "잘못된 게시글 아이디로 발생되는 에러"
+          description: "Invalid Parameter"
           schema:
-            $ref: "./error/error.yaml#/definitions/InvalidID"
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
 
 definitions:
-
   Board:
     $ref: "./board/board.yaml#/definitions/Board"
   ResponseBoard:
     $ref: "./board/board.yaml#/definitions/ResponseBoard"
   ResponseBoardResult:
     $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
-
-  ResponseBoardListResult:
-    $ref: "./board/board.yaml#/definitions/ResponseBoardListResult"
+  ResponseCreateBoard:
+    $ref: "./board/board.yaml#/definitions/ResponseCreateBoard"
+  ResponseCreateBoardResult:
+    $ref: "./board/board.yaml#/definitions/ResponseCreateBoardResult"
 
   ModifyBoard:
     $ref: "./board/board.yaml#/definitions/ModifyBoard"
@@ -271,16 +426,3 @@ definitions:
     $ref: "./comment/comment.yaml#/definitions/ModifyComment"
   ResponseModifyCommentResult:
     $ref: "./comment/comment.yaml#/definitions/ResponseModifyCommentResult"
-
-
-  InvalidID:
-    $ref: "./error/error.yaml#/definitions/InvalidID"
-  InvalidInput:
-    $ref: "./error/error.yaml#/definitions/InvalidInput"
-  InternalServer:
-    $ref: "./error/error.yaml#/definitions/InternalServer"
-
-
-externalDocs:
-  description: "Find out more about Swagger"
-  url: "http://swagger.io"

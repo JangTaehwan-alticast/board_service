@@ -7,9 +7,11 @@ default:
 spring:
   data:
     mongodb:
-     uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+      uri: mongodb://127.0.0.1:27017/
+#     uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+      database: mongo
   application:
-    name: parking-service
+    name: board-service
 
 logging:
   level:
@@ -19,6 +21,15 @@ logging:
           mongodb:
             core:
               MongoTemplate: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details : ALWAYS
+  endpoints:
+    web:
+      exposure:
+        include: "*"
 
 info:
   app:

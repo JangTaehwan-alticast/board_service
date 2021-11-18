@@ -9,26 +9,39 @@ definitions:
         type: string
         description: "응답메세지"
         example: "ok"
-  InvalidID:
+  204Error:
     properties:
       code:
         type: number
         description: "응답코드"
-        example: 400
       message:
         type: string
         description: "응답메세지"
-        example: "Invalid ID Error"
-  InvalidInput:
+    example:
+      - code: 1000001
+        message: "xxx(param) is not exist"
+  400Error:
     properties:
       code:
         type: number
-        description: "응답코드"
-        example: 405
+        decription: "응답코드"
       message:
         type: string
         description: "응답메세지"
-        example: "Invalid input Error"
+    example:
+      - code: 1000002
+        message: "xxx(param) is required"
+  404Error:
+    properties:
+      code:
+        type: number
+        decription: "응답코드"
+      message:
+        type: string
+        description: "응답메세지"
+    example:
+      code: 1000002
+      message: "Invalid Request"
   InternalServer:
     properties:
       code:
