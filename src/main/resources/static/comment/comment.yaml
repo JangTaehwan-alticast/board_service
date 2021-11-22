@@ -1,11 +1,7 @@
 definitions:
   Comment:
-    required:
-      - targetId
-      - nickName
-      - contents
     properties:
-      targetId:
+      postId:
         type: string
         description: "댓글 대상 게시글 아이디"
       nickName:
@@ -14,6 +10,16 @@ definitions:
       contents:
         type: string
         description: "댓글 내용"
+      createdDate:
+        type: string
+        description: "댓글 작성일"
+      updatedDate:
+        type: string
+        description: "댓글 수정일"
+    example:
+      nickName: "user123"
+      contents: "댓글내용"
+      createdDate: "2021-11-17T04:49:42.000+00:00"
   ResponseCommentResult:
     properties:
       code:
@@ -25,17 +31,31 @@ definitions:
         description: "응답메세지"
         example: "OK"
       result:
-        description: "결과값"
-        type: array
-        items:
-          allOf:
-            - $ref: "#/definitions/ResponseComment"
+        type: object
+        properties:
+          total:
+            type: number
+            description: "총 댓글수"
+            example: 2
+          page:
+            type: number
+            description: "offset(page)"
+            example: 1
+          size:
+            type: number
+            description: "interval(size)"
+            example: 10
+          data:
+            type: array
+            items:
+              allOf:
+               - $ref: "#/definitions/ResponseComment"
   ResponseComment:
     properties:
       commentId:
         type: string
         description: "댓글 아이디"
-      targetId:
+      postId:
         type: string
         description: "댓글 대상 게시글 아이디"
       nickName:
@@ -44,30 +64,48 @@ definitions:
       contents:
         type: string
         description: "댓글 내용"
-      postDate:
+      createdDate:
         type: string
         description: "댓글 작성일"
     example:
-      commentId: "5"
-      targetId: "2"
-      nickName: "user123"
-      contents: "내용입니다"
-      postDate: "2021-11-15 16:00"
+      - commentId: "5"
+        postId: "2"
+        nickName: "user123"
+        contents: "내용입니다"
+        createdDate: "2021-11-17T04:49:42.000+00:00"
+      - commentId: "6"
+        postId: "2"
+        nickName: "user234"
+        contents: "내용입니다2"
+        createdDate: "2021-11-17T04:49:42.000+00:00"
+  ResponseCreateCommentResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        type: object
+        example:
+          commentId: "6"
+          postId: "2"
+          nickName: "댓글작성자 닉네임"
+          contents: "작성한 댓글 내용"
+          createdDate: "2021-11-17T04:49:42.000+00:00"
   ModifyComment:
     properties:
-      commentId:
-        type: string
-        description: "댓글의 아이디"
-      targetId:
-        type: string
-        description: "댓글 대상 게시글 아이디"
       contents:
         type: string
         description: "수정 할 댓글 내용"
-    example:
-      commentId: "66"
-      targetId: "2"
-      contents: "수정할 댓글의 내용"
+        example: "수정할 댓글의 내용"
+      updateDate:
+        type: string
+        description: "수정날짜"
+        example: "2021-11-17T04:49:42.000+00:00"
   ResponseModifyCommentResult:
     properties:
       code:
@@ -86,11 +124,23 @@ definitions:
             - $ref: "#/definitions/ResponseModifyComment"
   ResponseModifyComment:
     properties:
-      schema:
-        $ref: "#/definitions/ModifyComment"
-    example:
-      commentId: "66"
-      targetId: "2"
-      nickName: "댓글작성자"
-      contents: "수정된 댓글의 내용"
-      modifiedDate: "2021-11-16 16:00:31"
+      commentId:
+        type: string
+        decription: "게시글의 아이디"
+        example: "66"
+      postId:
+        type: string
+        decription: "댓글의 아이디"
+        example: "2"
+      nickName:
+        type: string
+        decription: "댓글의 작성자 닉네임"
+        example: "댓글작성자"
+      contents:
+        type: string
+        decription: "댓글의 수정 내용"
+        example: "수정된 댓글의 내용"
+      updatedDate:
+        type: string
+        decription: "댓글의 수정 내용"
+        example: "2021-11-17T04:49:42.000+00:00"
