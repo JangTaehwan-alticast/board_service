@@ -8,7 +8,7 @@ definitions:
         type: string
         description: "작성자 닉네임"
       title:
-        type: string
+        type: array
         description: "게시글 제목"
       contents:
         type: string
@@ -43,11 +43,15 @@ definitions:
         items:
           $ref: "../comment/comment.yaml#/definitions/Comment"
     example: # 게시글 입력 parameter
-      "nickName": "string"
-      "title" : "string"
-      "contents" : "string"
-      "category" : "string"
-      "exposureDate" : "yyyy-MM-dd (Optional)"
+      nickName: "string"
+      title :
+        - lang: "ko"
+          value: "제목"
+        - lang: "en"
+          value: "title"
+      contents: "string"
+      category : "string"
+      exposureDate : "yyyy-MM-dd (Optional)"
 
   ResponseBoardResult: # 게시글 조회 결과로 변경
     properties:
@@ -70,7 +74,11 @@ definitions:
     example:
       postId: "1"
       nickName: "장태환"
-      title: "원하는 글의 제목"
+      title :
+        - lang: "ko"
+          value: "제목"
+        - lang: "en"
+          value: "title"
       contents: "원하는 글의 내용"
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
@@ -104,36 +112,40 @@ definitions:
       historyId:
         type: string
         description: "수정 버전의 아이디"
-        example: "1"
       postId:
         type: string
         description: "수정 버전 게시글의 아이디"
-        example: "2"
       updatedDate:
         type: string
         description: "수정일자"
-        example: "2021-11-17T04:49:42.000+00:00"
       nickName:
         type: string
         description: "최초글 작성자"
-        example: "first writer"
       modifier:
         type: string
         description: "수정한 사람"
-        example: "modifier123"
       title:
-        type: string
+        type: array
         description: "글 제목"
-        example: "제목입니다."
       contents:
         type: string
         description: "글 내용"
-        example: "내용입니다."
       version:
         type: string
         description: "해당 버전"
-        example: "V2.0"
-
+    example:
+      historyId: "1"
+      postId: "2"
+      updatedDate: "2021-11-17T04:49:42.000+00:00"
+      nickName: "first writer"
+      modifier: "modifier123"
+      title:
+        - lang: "ko"
+          value: "제목입니다."
+        - lang: "en"
+          value: "title"
+      contents: "내용입니다."
+      version: "V2.0"
   ResponseBoardListResult: # 게시글 조회 결과로 변경
     properties:
       code:
@@ -171,14 +183,16 @@ definitions:
     example:
       - postId: "1"
         nickName: "user23"
-        title: "user23이 작성한 글의 제목"
-#        contents: "user23이 작성한 글의 내용"
+        title:
+          - lang: "en"
+            value: "user23's posting"
+          - lang: "ko"
+            value: "user23이 작성한 게시글 제목"
         category: "all"
         createdDate: "2021-11-17T04:49:42.000+00:00"
       - postId: "2"
         nickName: "user12"
         title: "user12가 작성한 글의 제목"
-#        contents: "user12가 작성한 글의 내용"
         category: "all"
         createdDate: "2021-11-17T04:49:42.000+00:00"
 
@@ -209,7 +223,7 @@ definitions:
         type: string
         description: "작성자 닉네임"
       title:
-        type: string
+        type: array
         description: "제목"
       contents:
         type: string
@@ -229,7 +243,11 @@ definitions:
     example:
       postId: "12"
       nickName: "user9292"
-      title: "제목입니다"
+      title:
+        - lang: "en"
+          value: "title"
+        - lang: "ko"
+          value: "제목"
       contents: "내용입니다."
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
@@ -239,7 +257,7 @@ definitions:
   ModifyBoard:
     properties:
       title:
-        type: string
+        type: array
         description: "수정할 게시글의 제목"
       contents:
         type: string
@@ -251,7 +269,11 @@ definitions:
         type: string
         description: "수정일자"
     example:
-      title: "수정할 제목"
+      title:
+        - lang: "en"
+          value: "title"
+        - lang: "ko"
+          value: "제목"
       contents: "수정할 내용"
       modifier: "수정한 사람"
   ResponseModifyBoardResult:
@@ -278,7 +300,11 @@ definitions:
       postId: "1"
       nickName: "최초작성자"
       modifier: "수정한사람2"
-      title: "수정된 글의 제목"
+      title:
+        - lang: "en"
+          value: "title"
+        - lang: "ko"
+          value: "제목"
       contents: "수정된 글의 내용"
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
