@@ -95,7 +95,7 @@ paths:
         "200":
           description: "return board"
           schema:
-            $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
+            $ref: "./board/board.yaml#/definitions/ResponseBoardListResult"
         "204":
           description: "No Value Present"
           schema:
@@ -244,19 +244,66 @@ paths:
             description: "Internal Server Error"
             schema:
               $ref: "./code/code.yaml#/definitions/InternalServer"
-#  /board/restore:
-#    post:
-#      tag:
-#        - "management"
-#      summary: "삭제된 글 복원"
-#      produces:
-#        - "application/json"
-#      parameters:
-#        - in: "query"
-#          type: "string"
-#          name: "postId"
-#          description: "복원하고자 하는 글의 아이디"
-#          required: true
+  /board/history/{historyId}:
+    get:
+      tags:
+        - "board"
+      summary: "수정버전 조회"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          type: string
+          name: "historyId"
+          description: "조회하고자 하는 수정 버전의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./board/board.yaml#/definitions/HistoryResult"
+        "400":
+          description: "Invalid Parameter"
+          schema:
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
+  /board/restore/{postId}:
+    post:
+      tags:
+        - "management"
+      summary: "삭제된 글 복원"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          type: "string"
+          name: "postId"
+          description: "복원하고자 하는 글의 아이디"
+          required: true
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./code/code.yaml#/definitions/OK"
+        "400":
+          description: "Invalid Parameter"
+          schema:
+            $ref: "./code/code.yaml#/definitions/400Error"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
   /board/comment/{postId}:
     get:
       tags:
@@ -316,7 +363,7 @@ paths:
         "200":
           description: "return content"
           schema:
-            $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
+            $ref: "./comment/comment.yaml#/definitions/ResponseCreateCommentResult"
         "400":
           description: "Invalid Parameter"
           schema:

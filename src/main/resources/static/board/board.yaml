@@ -61,16 +61,8 @@ definitions:
         example: "OK"
       result:
         type: object
-        properties:
-          total:
-            type: number
-            description: "total count"
-            example: 1
-          data:
-            type: array
-            items:
-              allOf:
-                - $ref: "#/definitions/ResponseBoard"
+        allOf:
+          - $ref: "#/definitions/ResponseBoard"
   ResponseBoard:
     properties:
       schema:
@@ -83,42 +75,113 @@ definitions:
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
       history:
-        - version: 1.0
-          postId: 해당 버전의 게시글 아이디
+        - version: V1.0
+          postId: 1
+          historyId: 1
           updatedDate: "2021-11-17T04:49:42.000+00:00"
           modifier: "수정한 사람"
-        - version: 1.1
-          postId: 해당 버전의 게시글 아이디
+        - version: V2.0
+          postId: 1
+          historyId: 2
           updatedDate: "2021-11-17T04:49:42.000+00:00"
           modifier: "수정한 사람2"
-      comments:
-        total: 2
-        data:
-          - commentId: "5"
-            postId: "2"
-            nickName: "user123"
-            contents: "내용입니다"
-            createdDate: "2021-11-17T04:49:42.000+00:00"
-          - commentId: "6"
-            postId: "2"
-            nickName: "user234"
-            contents: "내용입니다2"
-            createdDate: "2021-11-17T04:49:42.000+00:00"
+  HistoryResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        type: object
+        allOf:
+          - $ref: "#/definitions/History"
   History:
     properties:
-      versionId:
+      historyId:
         type: string
         description: "수정 버전의 아이디"
-      postID:
+        example: "1"
+      postId:
         type: string
         description: "수정 버전 게시글의 아이디"
+        example: "2"
       updatedDate:
         type: string
         description: "수정일자"
         example: "2021-11-17T04:49:42.000+00:00"
+      nickName:
+        type: string
+        description: "최초글 작성자"
+        example: "first writer"
       modifier:
         type: string
         description: "수정한 사람"
+        example: "modifier123"
+      title:
+        type: string
+        description: "글 제목"
+        example: "제목입니다."
+      contents:
+        type: string
+        description: "글 내용"
+        example: "내용입니다."
+      version:
+        type: string
+        description: "해당 버전"
+        example: "V2.0"
+
+  ResponseBoardListResult: # 게시글 조회 결과로 변경
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        type: object
+        properties:
+          total:
+            type: number
+            description: "total count"
+            example: 2
+          page:
+            type: number
+            description: "offset(page)"
+            example: 1
+          size:
+            type: number
+            description: "interval(size)"
+            example: 10
+          data:
+            type: array
+            items:
+              $ref: "#/definitions/ResponseBoardList"
+
+  ResponseBoardList:
+    properties:
+      schema:
+        $ref: "#/definitions/Board"
+    example:
+      - postId: "1"
+        nickName: "user23"
+        title: "user23이 작성한 글의 제목"
+#        contents: "user23이 작성한 글의 내용"
+        category: "all"
+        createdDate: "2021-11-17T04:49:42.000+00:00"
+      - postId: "2"
+        nickName: "user12"
+        title: "user12가 작성한 글의 제목"
+#        contents: "user12가 작성한 글의 내용"
+        category: "all"
+        createdDate: "2021-11-17T04:49:42.000+00:00"
+
   ResponseCreateBoardResult:
     properties:
       code:
@@ -212,25 +275,24 @@ definitions:
       schema:
         $ref: "#/definitions/ResponseBoard"
     example:
-      postId: 001
-      nickName: "장태환"
+      postId: "1"
+      nickName: "최초작성자"
+      modifier: "수정한사람2"
       title: "수정된 글의 제목"
       contents: "수정된 글의 내용"
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
       history:
-        - "version": 1.1
-          "postId": 해당 버전의 게시글 아이디
+        - "version": V1.0
+          "postId": 1
+          "historyId": 1
           "updatedDate": "2021-11-17T04:49:42.000+00:00"
-          "modifier": "수정한 사람2"
-      comment:
-        - commentId: "5"
-          postId: "2"
-          nickName: "user123"
-          contents: "내용입니다"
-          createdDate: "2021-11-17T04:49:42.000+00:00"
-        - commentId: "6"
-          postId: "2"
-          nickName: "user234"
-          contents: "내용입니다2"
-          createdDate: "2021-11-17T04:49:42.000+00:00"
+          "nickName": "최초작성자"
+          "modifier": ""
+        - "version": V2.0
+          "postId": 1
+          "historyId": 2
+          "updatedDate": "2021-11-17T04:49:42.000+00:00"
+          "nickName": "최초작성자"
+          "modifier": "수정한 사람1"
+
