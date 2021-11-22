@@ -8,21 +8,29 @@ definitions:
         type: string
         description: "작성자 닉네임"
       title:
-        type: array
-        description: "게시글 제목"
+        type: object
+        description: "게시글 제목(MultiLang)"
+        properties:
+          lang:
+            type: string
+            description: "언어"
+          value:
+            type: string
+            description: "제목"
       contents:
         type: string
         description: "게시글 내용"
       category:
         type: string
         description: "카테고리 default all"
-      status:
-        type: number
+      useYn:
+        type: string
         description: "상태코드 \n
-        - 10: 노출 o 삭제 x \n
-        - 01: 노출 x 삭제 o \n
-        - 11: 노출 o 삭제 o (비정상)"
-        example: "10"
+        - 00: 노출 x 사용여부 x \n
+        - 10: 노출 o 사용여부 x (비정상)\n
+        - 01: 노출 x 사용여부 o \n
+        - 11: 노출 o 사용여부 o "
+        example: "11"
       exposureDate:
         type: string
         description: "노출 기준일"
@@ -125,8 +133,15 @@ definitions:
         type: string
         description: "수정한 사람"
       title:
-        type: array
-        description: "글 제목"
+        type: object
+        description: "게시글 제목(MultiLang)"
+        properties:
+          lang:
+            type: string
+            description: "언어"
+          value:
+            type: string
+            description: "제목"
       contents:
         type: string
         description: "글 내용"
@@ -223,8 +238,15 @@ definitions:
         type: string
         description: "작성자 닉네임"
       title:
-        type: array
-        description: "제목"
+        type: object
+        description: "게시글 제목(MultiLang)"
+        properties:
+          lang:
+            type: string
+            description: "언어"
+          value:
+            type: string
+            description: "제목"
       contents:
         type: string
         description: "내용"
@@ -237,7 +259,7 @@ definitions:
       exposuerDate:
         type: string
         description: "게시일"
-      status:
+      useYn:
         type: string
         description: "상태코드"
     example:
@@ -252,13 +274,20 @@ definitions:
       category: "all"
       createdDate: "2021-11-17T04:49:42.000+00:00"
       exposureDate: "2021-11-17T04:49:42.000+00:00"
-      status: 10
+      useYn: "11"
 
   ModifyBoard:
     properties:
       title:
-        type: array
-        description: "수정할 게시글의 제목"
+        type: object
+        description: "게시글 제목(MultiLang)"
+        properties:
+          lang:
+            type: string
+            description: "언어"
+          value:
+            type: string
+            description: "제목"
       contents:
         type: string
         description: "수정할 게시글의 내용"

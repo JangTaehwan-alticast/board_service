@@ -1,20 +1,43 @@
 package com.msp.board_service.router
 
+import com.msp.board_service.handler.BoardHandler
 import org.springframework.context.annotation.Bean
-import org.springframework.http.MediaType
-import org.springframework.stereotype.Component
-import org.springframework.core.io.ClassPathResource
+import org.springframework.context.annotation.Configuration
+import org.springframework.http.MediaType.*
 import org.springframework.web.reactive.function.server.router
 import java.net.URI
 
-@Component
-class BoardRouter {
+@Configuration
+class BoardRouter(val boardHandler: BoardHandler) {
 
-    @Bean
-    fun swaggerRouter() = router {
-        accept(MediaType.TEXT_HTML).nest {
+
+    @Bean("BoardHandlerV1.0")
+    fun boardRouter() = router {
+        accept(TEXT_HTML).nest {
             GET("/") { permanentRedirect(URI("index.html")).build() }
+            GET("/board",boardHandler::getBoardList)
         }
-        resources("/**", ClassPathResource("/static"))
+        accept(APPLICATION_JSON).nest{
+            "/board-service/v1".nest {
+                GET("/board",boardHandler::getBoardList)
+                POST("/board",boardHandler::insertBoardTest)
+//
+//                GET("/board/{postId}")
+//                PATCH("/board/{postId")
+//                DELETE("/board/{postId}")
+//
+//                GET("/board/history/{historyId}")
+//
+//                GET("/board/comment/{postId}")
+//                POST("/board/comment/{postId}")
+//                PATCH("/board/comment/{postId}")
+//                DELETE("/board/comment/{postId}")
+//
+//                POST("/board/restore/{postId}")
+
+
+            }
+        }
     }
+
 }
