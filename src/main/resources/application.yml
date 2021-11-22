@@ -9,7 +9,7 @@ spring:
     mongodb:
       uri: mongodb://127.0.0.1:27017/
 #     uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
-      database: mongo
+      database: newbie
   application:
     name: board-service
 

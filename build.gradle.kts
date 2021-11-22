@@ -13,18 +13,8 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 
 val springBootVersion: String by extra
-//var springCloudVersion: String by extra
-//val springProfile: String by project
-//val dockerPluginVersion: String by extra
 val gsonVersion: String by extra
 var kotlinLoggingVersion: String by extra
-//val okhttp4: String by project
-
-//val jdkVersion: String by extra
-//val jUnitVersion: String by extra
-//val dockerEcrVersion: String by extra
-//val kotlinVersion: String by extra
-//var kotlinxCoroutinesReactorVersion: String by extra
 
 
 
@@ -39,6 +29,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	implementation("org.springframework.boot:spring-boot-starter-aop")
 
 	//spring boot version 문제인지..
 //	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
@@ -57,7 +48,6 @@ dependencies {
 dependencyManagement {
 	imports {
 		mavenBom("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
-//		mavenBom("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
 	}
 }
 
