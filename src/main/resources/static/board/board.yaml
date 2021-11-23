@@ -32,13 +32,13 @@ definitions:
         - 11: 노출 o 사용여부 o "
         example: "11"
       exposureDate:
-        type: string
+        type: integer
         description: "노출 기준일"
       createdDate:
-        type: string
+        type: integer
         description: "작성일"
       deletedDate:
-        type: string
+        type: integer
         description: "삭제일"
       history:
         type: array
@@ -59,7 +59,7 @@ definitions:
           value: "title"
       contents: "string"
       category : "string"
-      exposureDate : "yyyy-MM-dd (Optional)"
+      exposureDate : 1637654096
 
   ResponseBoardResult: # 게시글 조회 결과로 변경
     properties:

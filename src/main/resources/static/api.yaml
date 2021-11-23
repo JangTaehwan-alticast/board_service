@@ -1,7 +1,7 @@
-swagger: "2.0"
+swagger: "3.0"
 info:
   version: v1.0.0
-  title: Backend-Board-Service API
+  title: Board-Service API
   contact:
     email: "trdev1@alticast.com"
   license:
