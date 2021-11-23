@@ -1,10 +1,8 @@
 package com.msp.board_service.aop
-
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
 import org.slf4j.LoggerFactory
-import org.springframework.aop.aspectj.MethodInvocationProceedingJoinPoint
 import org.springframework.stereotype.Component
 import java.lang.System.*
 
@@ -12,10 +10,9 @@ import java.lang.System.*
 @Component
 class LogAspect {
 
-    companion object{
+    companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
     }
-
     @Around("@annotation(logExecute)")
     fun log(joinPoint: ProceedingJoinPoint, logExecute: LogExecute): Any? =
         joinPoint.run {
@@ -29,8 +26,7 @@ class LogAspect {
     fun logMessage(start: Long, signature: String, api: String?="", message: String?="",level: LoggerLevel){
 
         val logMessage = with(StringBuffer()){
-            append("[Board-service - AOP] $signature call: ${currentTimeMillis()-start} ms")
-            if(api != null && api.isNotBlank()) append(", api: $api")
+            append("[Board-service AOP] $signature time: ${currentTimeMillis()-start} ms")
             if(message != null && message.isNotBlank()) append(", message: $message")
             toString()
         }

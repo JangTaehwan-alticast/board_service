@@ -3,6 +3,7 @@ package com.msp.board_service.router
 import com.msp.board_service.handler.BoardHandler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType.*
 import org.springframework.web.reactive.function.server.router
 import java.net.URI
@@ -20,7 +21,7 @@ class BoardRouter(val boardHandler: BoardHandler) {
         accept(APPLICATION_JSON).nest{
             "/board-service/v1".nest {
                 GET("/board",boardHandler::getBoardList)
-                POST("/board",boardHandler::insertBoardTest)
+                POST("/board",boardHandler::insertBoard)
 //
 //                GET("/board/{postId}")
 //                PATCH("/board/{postId")
@@ -38,6 +39,7 @@ class BoardRouter(val boardHandler: BoardHandler) {
 
             }
         }
+        resources("/**", ClassPathResource("static/"))
     }
 
 }
