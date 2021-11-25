@@ -11,7 +11,6 @@ import java.net.URI
 @Configuration
 class BoardRouter(val boardHandler: BoardHandler) {
 
-
     @Bean("BoardHandlerV1.0")
     fun boardRouter() = router {
         accept(TEXT_HTML).nest {
@@ -22,10 +21,10 @@ class BoardRouter(val boardHandler: BoardHandler) {
             "/board-service/v1".nest {
                 GET("/board",boardHandler::getBoardList)
                 POST("/board",boardHandler::insertBoard)
+                PATCH("/board/{postId}",boardHandler::modifyBoard)
+                DELETE("/board/{postId}",boardHandler::deleteBoard)
 //
 //                GET("/board/{postId}")
-//                PATCH("/board/{postId")
-//                DELETE("/board/{postId}")
 //
 //                GET("/board/history/{historyId}")
 //

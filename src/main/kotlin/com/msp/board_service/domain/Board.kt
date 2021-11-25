@@ -15,25 +15,14 @@ data class Board(
     var exposureDateRes: String? = null,
     var createdDate: Long? = null,
     var createdDateRes: String? = null,
-    var updateDate: Long? = null,
-    var updateDateRes: String? = null,
-    var deletedDate: Long? = null,
-    var deletedDateRes: String? = null,
-    var History: ArrayList<History>? = null
+    var lastUpdateDate: Long? = null,
+    var lastUpdateDateRes: String? = null,
+//    var History: ArrayList<History>? = null
 
 )
 
-data class History(
-    var historyId: String? = null,
-    var postId: String? = null,
-    var updateDate: Long? = null,
-    var updateDateRes: String? = null,
-    var nickName: String? = null,
-    var title: ArrayList<MultiLang>? = null,
-    var contents: String? = null,
-    var version: String? =null,
-)
 
+@Document("comment")
 data class Comment(
     var postId: String? = null,
     var nickName: String? = null,
