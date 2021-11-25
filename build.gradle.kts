@@ -30,6 +30,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.springframework.boot:spring-boot-starter-aop")
+	implementation( "org.apache.commons:commons-lang3:3.12.0")
+
 
 	//spring boot version 문제인지..
 //	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
@@ -38,8 +40,6 @@ dependencies {
 	//parking-service 참고
 	implementation("com.google.code.gson:gson:${gsonVersion}")
 	implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
-
-
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

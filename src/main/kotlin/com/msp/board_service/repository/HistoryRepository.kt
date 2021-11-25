@@ -1,8 +1,7 @@
 package com.msp.board_service.repository
 
-import com.msp.board_service.domain.Board
-import com.msp.board_service.domain.DeleteBoardHistory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.query.Query
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
 
@@ -13,7 +12,11 @@ class HistoryRepository(private val template: ReactiveMongoTemplate) {
         const val COLLECTION_NM = "history"
     }
 
-    fun insertBoardHistory(dbh: DeleteBoardHistory): Mono<DeleteBoardHistory> {
-        return template.insert(dbh, COLLECTION_NM)
+    fun insertBoardHistory(doc: Any): Mono<Any> {
+        return template.insert(doc, COLLECTION_NM)
+    }
+
+    fun countHistoryBoard(query: Query) : Mono<Long>{
+        return template.count(query, COLLECTION_NM)
     }
 }
