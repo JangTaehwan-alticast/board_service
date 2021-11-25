@@ -25,7 +25,7 @@ class BoardRouter(val boardHandler: BoardHandler) {
 //
 //                GET("/board/{postId}")
 //                PATCH("/board/{postId")
-//                DELETE("/board/{postId}")
+                DELETE("/board/{postId}",boardHandler::deleteBoard)
 //
 //                GET("/board/history/{historyId}")
 //

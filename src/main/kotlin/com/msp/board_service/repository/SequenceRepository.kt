@@ -24,7 +24,7 @@ class SequenceRepository(private val template: ReactiveMongoTemplate) {
         var query = Query(where("_id").`is`(collectionName))
         var update: Update = Update().inc("seq",1)
         var options: FindAndModifyOptions = FindAndModifyOptions().returnNew(true)
-        return template.findAndModify<Seq>(query,update,options, COLLECTION_NM).switchIfEmpty{
+        return template.findAndModify<Seq>(query,update,options, COLLECTION_NM).switchIfEmpty {
             insertSeq(collectionName)
         }
     }
@@ -32,5 +32,6 @@ class SequenceRepository(private val template: ReactiveMongoTemplate) {
     fun insertSeq(collectionName: String): Mono<Seq>{
         return template.insert(Seq(collectionName,0), COLLECTION_NM)
     }
+
 
 }

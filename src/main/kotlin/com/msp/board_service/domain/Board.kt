@@ -19,20 +19,11 @@ data class Board(
     var updateDateRes: String? = null,
     var deletedDate: Long? = null,
     var deletedDateRes: String? = null,
-    var History: ArrayList<History>? = null
+//    var History: ArrayList<History>? = null
 
 )
 
-data class History(
-    var historyId: String? = null,
-    var postId: String? = null,
-    var updateDate: Long? = null,
-    var updateDateRes: String? = null,
-    var nickName: String? = null,
-    var title: ArrayList<MultiLang>? = null,
-    var contents: String? = null,
-    var version: String? =null,
-)
+
 
 data class Comment(
     var postId: String? = null,
