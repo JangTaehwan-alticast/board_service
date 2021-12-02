@@ -1,5 +1,6 @@
 package com.msp.board_service.util
 
+import com.msp.board_service.exception.CustomException
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.util.StringUtils
 import java.util.*
@@ -307,13 +308,12 @@ class MakeWhereCriteria {
                         else -> Criteria()
                     }
                 }
-                else -> Criteria()
+                else -> throw CustomException.invalidExpValue(exp)
             }
         }
 
         fun makeWhereCriteria(param: String, exp: String, value: String):Criteria{
             return makeWhereCriteria(param,exp,value,"string")
         }
-
     }
 }

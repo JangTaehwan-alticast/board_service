@@ -61,7 +61,7 @@ definitions:
       category : "string"
       exposureDate : 1637654096
 
-  ResponseBoardResult: # 게시글 조회 결과로 변경
+  ResponseBoardResult:
     properties:
       code:
         type: number
@@ -80,27 +80,17 @@ definitions:
       schema:
         $ref: "#/definitions/Board"
     example:
-      postId: "1"
+      postId: "post_1"
       nickName: "장태환"
+      category: "all"
       title :
         - lang: "ko"
           value: "제목"
         - lang: "en"
           value: "title"
       contents: "원하는 글의 내용"
-      category: "all"
-      createdDate: "2021-11-17T04:49:42.000+00:00"
-      history:
-        - version: V1.0
-          postId: 1
-          historyId: 1
-          updatedDate: "2021-11-17T04:49:42.000+00:00"
-          modifier: "수정한 사람"
-        - version: V2.0
-          postId: 1
-          historyId: 2
-          updatedDate: "2021-11-17T04:49:42.000+00:00"
-          modifier: "수정한 사람2"
+      createdDate: "2021-11-17T04:49:42"
+      lastUpdatedDate: "2021-11-17T04:49:42"
   HistoryResult:
     properties:
       code:
@@ -149,19 +139,99 @@ definitions:
         type: string
         description: "해당 버전"
     example:
-      historyId: "1"
-      postId: "2"
-      updatedDate: "2021-11-17T04:49:42.000+00:00"
-      nickName: "first writer"
+      historyId: "history_1"
+      postId: "post_1"
+      updatedDate: "2021-11-17T04:49:42"
+      version: "V1.0"
       modifier: "modifier123"
-      title:
-        - lang: "ko"
-          value: "제목입니다."
-        - lang: "en"
-          value: "title"
-      contents: "내용입니다."
-      version: "V2.0"
-  ResponseBoardListResult: # 게시글 조회 결과로 변경
+
+  BoardHistoryResult:
+    properties:
+      code:
+        type: number
+        description: "응답코드"
+        example: 200
+      message:
+        type: string
+        description: "응답메세지"
+        example: "OK"
+      result:
+        type: object
+        allOf:
+          - $ref: "#/definitions/BoardHistory"
+  BoardHistory:
+    properties:
+      historyId:
+        type: string
+        description: "수정 버전의 아이디"
+      postId:
+        type: string
+        description: "수정 버전 게시글의 아이디"
+      type:
+        type: string
+        description: "history 에 이동된 이유"
+      updatedDate:
+        type: string
+        description: "수정일자"
+      board:
+        type: object
+        description: "최초글 작성자"
+        properties:
+          postId:
+            type: string
+            description: "게시글 아이디"
+          nickName:
+            type: string
+            description: "작성자"
+          category:
+            type: string
+            description: "카테고리"
+          title:
+            type: object
+            description: "게시글 제목(MultiLang)"
+            properties:
+              lang:
+                type: string
+                description: "언어"
+              value:
+                type: string
+                description: "제목"
+          contents:
+            type: string
+            description: "글 내용"
+          createdDate:
+            type: string
+            description: "작성일"
+          lastUpdatedDate:
+            type: string
+            description: "작성일"
+      modifier:
+        type: string
+        description: "수정한 사람"
+      version:
+        type: string
+        description: "해당 버전"
+    example:
+      historyId: "history_1"
+      postId: "post_1"
+      type: "PATCH"
+      board:
+        postId: "post_1"
+        nickName: "닉네임"
+        title:
+          - lang: "ko"
+            value: "한국어 제목"
+          - lang: "en"
+            value: "english title"
+        contents: "내용"
+        createdDate: "2021-11-16T04:49:42"
+        lastUpdatedDate: "2021-11-16T04:49:42"
+      updatedDate: "2021-11-17T04:49:42"
+      version: "V1.0"
+      modifier: "modifier123"
+
+
+  ResponseBoardListResult:
     properties:
       code:
         type: number
@@ -196,7 +266,7 @@ definitions:
       schema:
         $ref: "#/definitions/Board"
     example:
-      - postId: "1"
+      - postId: "post_1"
         nickName: "user23"
         title:
           - lang: "en"
@@ -204,12 +274,17 @@ definitions:
           - lang: "ko"
             value: "user23이 작성한 게시글 제목"
         category: "all"
-        createdDate: "2021-11-17T04:49:42.000+00:00"
-      - postId: "2"
-        nickName: "user12"
-        title: "user12가 작성한 글의 제목"
+        createdDate: "2021-11-17T04:49:42"
+      - postId: "post_1"
+        nickName: "user1231"
+        title:
+          - lang: "en"
+            value: "user1231's posting"
+          - lang: "ko"
+            value: "user1231이 작성한 게시글 제목"
         category: "all"
-        createdDate: "2021-11-17T04:49:42.000+00:00"
+        createdDate: "2021-11-18T04:49:42"
+
 
   ResponseCreateBoardResult:
     properties:
@@ -222,13 +297,11 @@ definitions:
         description: "응답메세지"
         example: "OK"
       result:
-        type: object
-        properties:
-          data:
-            type: array
-            items:
-              allOf:
-                - $ref: "#/definitions/ResponseCreateBoard"
+        type: array
+        items:
+          allOf:
+            - $ref: "#/definitions/ResponseCreateBoard"
+
   ResponseCreateBoard:
     properties:
       postId:
@@ -256,14 +329,8 @@ definitions:
       createdDate:
         type: string
         description: "작성일"
-      exposuerDate:
-        type: string
-        description: "게시일"
-      useYn:
-        type: string
-        description: "상태코드"
     example:
-      postId: "12"
+      postId: "post_12"
       nickName: "user9292"
       title:
         - lang: "en"
@@ -272,9 +339,7 @@ definitions:
           value: "제목"
       contents: "내용입니다."
       category: "all"
-      createdDate: "2021-11-17T04:49:42.000+00:00"
-      exposureDate: "2021-11-17T04:49:42.000+00:00"
-      useYn: "11"
+      createdDate: "2021-11-17T04:49:42"
 
   ModifyBoard:
     properties:
@@ -316,38 +381,10 @@ definitions:
         description: "응답메세지"
         example: "OK"
       result:
+        type: number
         description: "결과값"
-        type: array
-        items:
-          allOf:
-            - $ref: "#/definitions/ResponseModifyBoard"
-  ResponseModifyBoard:
-    properties:
-      schema:
-        $ref: "#/definitions/ResponseBoard"
-    example:
-      postId: "1"
-      nickName: "최초작성자"
-      modifier: "수정한사람2"
-      title:
-        - lang: "en"
-          value: "title"
-        - lang: "ko"
-          value: "제목"
-      contents: "수정된 글의 내용"
-      category: "all"
-      createdDate: "2021-11-17T04:49:42.000+00:00"
-      history:
-        - "version": V1.0
-          "postId": 1
-          "historyId": 1
-          "updatedDate": "2021-11-17T04:49:42.000+00:00"
-          "nickName": "최초작성자"
-          "modifier": ""
-        - "version": V2.0
-          "postId": 1
-          "historyId": 2
-          "updatedDate": "2021-11-17T04:49:42.000+00:00"
-          "nickName": "최초작성자"
-          "modifier": "수정한 사람1"
+        example: 1
+
+
+
 

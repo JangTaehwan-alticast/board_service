@@ -13,8 +13,8 @@ tags:
     description: "게시판 글 조회/등록/수정/삭제"
   - name: "comment"
     description: "댓글 등록/수정/삭제"
-  - name: "management"
-    description: "게시판 관리"
+  - name: "history"
+    description: "게시글 수정/삭제 이력관리"
 schemes:
 #  - "https"
   - "http"
@@ -48,12 +48,15 @@ paths:
         - 참고1) null인 값을 조회 - {필드명}%eq?null 로 입력하여 검색한다.\n
         - 참고2) null이 아닌 값을 조회 - {필드명}%ne?null 로 입력하여 검색한다.\n
         - ex) 필드명1%in?값1,값2,값3,필드명2%eq?값1,필드명3%eq?null\n\n
+        [sorting 참고사항]\n
+        - parameter 중 orderBy 부분에 {sorting할필드명}:{sorting방법} 순으로 입력하고, 다중 sorting이 필요한 경우 ','구분자를 이용한다.\n
+        - sorting방법은 1 입력시 ASC, -1 입력시 DESC\n
+        - 기본정렬은 createdDate DESC로 정렬 됨.\n\n
         [검색 시 주의사항]\n
         - 하나의 필드에 대해 q 검색과 필드명 검색 조건을 중복하여 넣지 않는다.\n\n
         [참고사항]\n
         - 범위(BETWEEN) 검색 필요시 le 와 ge를 활용한다. 아래 가입일시 0 ~ 99999 사이 검색 예제 참고\n
-        - ?createdDate=ge?0&createdDate=le?99999\n
-        - comments 는 default 로 10개의 결과를 반환하며 /board/comment/{postId} 로 paging 이 가능하다. \n"
+        - ?createdDate=ge?0&createdDate=le?99999\n"
       consumes:
         - "application/json"
       produces:
@@ -91,6 +94,14 @@ paths:
           type: number
           name: "size"
           description: "페이지 사이즈 (default:10)"
+        - in: "query"
+          type: number
+          name: "orderBy"
+          description: "정렬 기준 (default createdDate desc)"
+        - in: "query"
+          type: number
+          name: "lang"
+          description: "다국어 (default all)"
       responses:
         "200":
           description: "return board"
@@ -99,11 +110,7 @@ paths:
         "204":
           description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/204Error"
-        "400":
-          description: "Invalid Parameter"
-          schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -123,7 +130,7 @@ paths:
       parameters:
         - in: "body"
           name: "body"
-          description: "exposureDate는 게시일자로 별도 지정하지 않을 경우 게시는 작성일을 기준으로 노출"
+          description: "exposureDate는 게시일자로 미입력시 작성일을 기준으로 노출"
           required: true
           schema:
             $ref: "./board/board.yaml#/definitions/Board"
@@ -132,10 +139,10 @@ paths:
           description: "ok"
           schema:
             $ref: "./board/board.yaml#/definitions/ResponseCreateBoardResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -164,10 +171,10 @@ paths:
           description: "해당 게시글 반환"
           schema:
             $ref: "./board/board.yaml#/definitions/ResponseBoardResult"
-        "400":
-          description: "Invalid Parameter Error Check Message"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -201,10 +208,10 @@ paths:
           description: "Ok"
           schema:
             $ref: "./board/board.yaml#/definitions/ResponseModifyBoardResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -232,10 +239,10 @@ paths:
             description: "ok"
             schema:
               $ref: "./code/code.yaml#/definitions/OK"
-          "400":
-            description: "Invalid Parameter"
+          "204":
+            description: "No Value Present"
             schema:
-              $ref: "./code/code.yaml#/definitions/400Error"
+              $ref: "./code/code.yaml#/definitions/customException"
           "404":
             description: "Invalid Request"
             schema:
@@ -244,17 +251,17 @@ paths:
             description: "Internal Server Error"
             schema:
               $ref: "./code/code.yaml#/definitions/InternalServer"
-  /board/history/{historyId}:
+  /board/{postId}/history:
     get:
       tags:
-        - "board"
-      summary: "수정버전 조회"
+        - "history"
+      summary: "수정버전 이력조회"
       produces:
         - "application/json"
       parameters:
         - in: "path"
           type: string
-          name: "historyId"
+          name: "postId"
           description: "조회하고자 하는 수정 버전의 아이디"
           required: true
       responses:
@@ -262,10 +269,10 @@ paths:
           description: "ok"
           schema:
             $ref: "./board/board.yaml#/definitions/HistoryResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -274,10 +281,40 @@ paths:
           description: "Internal Server Error"
           schema:
             $ref: "./code/code.yaml#/definitions/InternalServer"
-  /board/restore/{postId}:
-    post:
+  /board/{historyId}/history-one:
+    get:
       tags:
-        - "management"
+        - "history"
+      summary: "게시글 버전별 조회"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          type: string
+          name: "historyId"
+          description: "조회하고자 하는 수정 버전의 히스토리 아이디"
+          required: true
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "./board/board.yaml#/definitions/BoardHistoryResult"
+        "204":
+          description: "No Value Present"
+          schema:
+            $ref: "./code/code.yaml#/definitions/customException"
+        "404":
+          description: "Invalid Request"
+          schema:
+            $ref: "./code/code.yaml#/definitions/404Error"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "./code/code.yaml#/definitions/InternalServer"
+  /board/{postId}/restoration:
+    patch:
+      tags:
+        - "history"
       summary: "삭제된 글 복원"
       produces:
         - "application/json"
@@ -292,10 +329,10 @@ paths:
           description: "ok"
           schema:
             $ref: "./code/code.yaml#/definitions/OK"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -304,7 +341,7 @@ paths:
           description: "Internal Server Error"
           schema:
             $ref: "./code/code.yaml#/definitions/InternalServer"
-  /board/comment/{postId}:
+  /board/{postId}/comment:
     get:
       tags:
         - "comment"
@@ -330,10 +367,10 @@ paths:
           description: "return content"
           schema:
             $ref: "./comment/comment.yaml#/definitions/ResponseCommentResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -364,10 +401,10 @@ paths:
           description: "return content"
           schema:
             $ref: "./comment/comment.yaml#/definitions/ResponseCreateCommentResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -376,7 +413,7 @@ paths:
           description: "Internal Server Error"
           schema:
             $ref: "./code/code.yaml#/definitions/InternalServer"
-  /board/comment/{commentId}:
+  /board/{commentId}/comment:
     patch:
       tags:
         - "comment"
@@ -399,10 +436,10 @@ paths:
           description: "return contents"
           schema:
             $ref: "./comment/comment.yaml#/definitions/ResponseModifyCommentResult"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -430,10 +467,10 @@ paths:
           description: "ok"
           schema:
             $ref: "./code/code.yaml#/definitions/OK"
-        "400":
-          description: "Invalid Parameter"
+        "204":
+          description: "No Value Present"
           schema:
-            $ref: "./code/code.yaml#/definitions/400Error"
+            $ref: "./code/code.yaml#/definitions/customException"
         "404":
           description: "Invalid Request"
           schema:
@@ -457,8 +494,6 @@ definitions:
 
   ModifyBoard:
     $ref: "./board/board.yaml#/definitions/ModifyBoard"
-  ResponseModifyBoard:
-    $ref: "./board/board.yaml#/definitions/ResponseModifyBoard"
   ResponseModifyBoardResult:
     $ref: "./board/board.yaml#/definitions/ResponseModifyBoardResult"
 

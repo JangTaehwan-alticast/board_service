@@ -1,52 +1,45 @@
 package com.msp.board_service.handler
 
 import com.msp.board_service.config.CodeConfig
-import com.msp.board_service.domain.Board
-import com.msp.board_service.domain.request.ModBoardRequest
+import com.msp.board_service.domain.request.InsertCommentRequest
+import com.msp.board_service.domain.request.ModCommentRequest
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
-import com.msp.board_service.service.BoardService
+import com.msp.board_service.service.CommentService
 import com.msp.board_service.util.LogMessageMaker
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.stereotype.Component
 import org.springframework.util.StopWatch
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.ServerResponse.ok
+import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
 
 @Component
-class BoardHandler(val boardService: BoardService) {
+class CommentHandler(val cmntService: CommentService) {
 
-    private val logger = LoggerFactory.getLogger(this::class.java)
+    private val logger = KotlinLogging.logger {  }
 
     /**
-     * 게시판 글 검색 포함 목록
+     * 댓글 리스트 조회
      */
-    fun getBoardList(req:ServerRequest) : Mono<ServerResponse> {
+    fun findCmntList(req:ServerRequest): Mono<ServerResponse>{
         val stopWatch = StopWatch()
         stopWatch.start()
         return Mono.just(req).flatMap {
-            boardService.getBoardList(
-                postId = req.queryParam("postId").orElse(""),
-                category = req.queryParam("category").orElse(""),
-                nickName = req.queryParam("nickName").orElse(""),
-                title = req.queryParam("title").orElse(""),
-                contents = req.queryParam("contents").orElse(""),
-                q = req.queryParam("q").orElse(""),
+            cmntService.findCmntList(
+                postId = req.pathVariable("postId"),
                 page = req.queryParam("page").orElse("0").toLong(),
-                size = req.queryParam("size").orElse("0").toLong(),
-                orderBy = req.queryParam("orderBy").orElse(""),
-                lang = req.queryParam("lang").orElse("")
+                size = req.queryParam("size").orElse("0").toLong()
             )
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "getBoardList",
+                serviceName = "CommentService",
+                function = "getCmntList",
                 result = "SUCCESS",
                 value = it,
                 path = req.pathVariables(),
@@ -57,8 +50,8 @@ class BoardHandler(val boardService: BoardService) {
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "getBoardList",
+                serviceName = "CommentService",
+                function = "getCmntList",
                 result = "SUCCESS",
                 value = CodeConfig.MESSAGE_NO_VALUE,
                 path = req.pathVariables(),
@@ -71,8 +64,8 @@ class BoardHandler(val boardService: BoardService) {
                 is CustomException ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "getBoardList",
+                        serviceName = "CommentService",
+                        function = "getCmntList",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = it.errorCode,
@@ -84,8 +77,8 @@ class BoardHandler(val boardService: BoardService) {
                 }else ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "getBoardList",
+                        serviceName = "CommentService",
+                        function = "getCmntList",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = 500,
@@ -100,73 +93,20 @@ class BoardHandler(val boardService: BoardService) {
     }
 
     /**
-     * 게시글 단건 조회
+     * 댓글 입력
      */
-    fun getOneBoard(req:ServerRequest) : Mono<ServerResponse> {
+    fun insertCmmt(req:ServerRequest): Mono<ServerResponse>{
         val stopWatch = StopWatch()
         stopWatch.start()
-        return Mono.just(req).flatMap {
-            boardService.getOneBoard(req.pathVariable("postId"))
-        }.flatMap {
-            var logMsg = LogMessageMaker.getSuccessLog(
-                stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "getOneBoard",
-                result = "SUCCESS",
-                value = it,
-                path = req.pathVariables(),
-                param = req.queryParams()
-            )
-            logger.info(logMsg)
-            ok().body(Mono.just(Response.ok(it)))
-        }.onErrorResume {
-            when(it){
-                is CustomException ->{
-                    val logMsg = LogMessageMaker.getFailureLog(
-                        stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "getOneBoard",
-                        result = "FAILURE" ,
-                        message = it.message!!,
-                        code = it.errorCode,
-                        path = req.pathVariables(),
-                        param = req.queryParams()
-                    )
-                    logger.error(logMsg)
-                    ok().body(Mono.just(Response(it.errorCode,it.message.toString(),null)))
-                }else ->{
-                    val logMsg = LogMessageMaker.getFailureLog(
-                        stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "getOneBoard",
-                        result = "FAILURE" ,
-                        message = it.message!!,
-                        code = 500,
-                        path = req.pathVariables(),
-                        param = req.queryParams()
-                    )
-                    logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
-                }
-            }
-        }
-    }
-
-    /**
-     * 게시글 입력
-     */
-    fun insertBoard(req:ServerRequest) : Mono<ServerResponse> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
-        return req.bodyToMono(Board::class.java).switchIfEmpty {
+        return req.bodyToMono(InsertCommentRequest::class.java).switchIfEmpty {
             throw CustomException.invalidParameter("body")
         }.flatMap {
-            this.boardService.insertBoard(it)
+            cmntService.insertCmmt(req.pathVariable("postId"),it)
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "insertBoard",
+                serviceName = "CommentService",
+                function = "insertCmnt",
                 result = "SUCCESS",
                 value = it,
                 path = req.pathVariables(),
@@ -174,25 +114,13 @@ class BoardHandler(val boardService: BoardService) {
             )
             logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
-        }.switchIfEmpty {
-            var logMsg = LogMessageMaker.getSuccessLog(
-                stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "insertBoard",
-                result = "SUCCESS",
-                value = CodeConfig.MESSAGE_NO_VALUE,
-                path = req.pathVariables(),
-                param = req.queryParams()
-            )
-            logger.info(logMsg)
-            ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
                 is CustomException ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "insertBoard",
+                        serviceName = "CommentService",
+                        function = "insertCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = it.errorCode,
@@ -205,8 +133,8 @@ class BoardHandler(val boardService: BoardService) {
                 is ServerWebInputException ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "insertBoard",
+                        serviceName = "CommentService",
+                        function = "insertCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = 400,
@@ -220,8 +148,8 @@ class BoardHandler(val boardService: BoardService) {
                 else ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "insertBoard",
+                        serviceName = "CommentService",
+                        function = "insertCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = 500,
@@ -235,22 +163,74 @@ class BoardHandler(val boardService: BoardService) {
         }
     }
 
-
     /**
-     * 게시글 수정
+     * 댓글 삭제
      */
-    fun modifyBoard(req:ServerRequest):Mono<ServerResponse>{
+    fun deleteCmnt(req:ServerRequest): Mono<ServerResponse>{
         val stopWatch = StopWatch()
         stopWatch.start()
-        return req.bodyToMono(ModBoardRequest::class.java).switchIfEmpty {
-            throw CustomException.invalidParameter("body")
-        }.flatMap { modBoardRequest ->
-            boardService.modifyBoard(req.pathVariable("postId"),modBoardRequest)
+        return Mono.just(req).flatMap {
+            cmntService.deleteCmnt(req.pathVariable("commentId"))
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "updateBoard",
+                serviceName = "CommentService",
+                function = "deleteCmnt",
+                result = "SUCCESS",
+                value = it,
+                path = req.pathVariables(),
+                param = req.queryParams()
+            )
+            logger.info(logMsg)
+            ok().body(Mono.just(Response.ok(it.deletedCount)))
+        }.onErrorResume {
+            when(it){
+                is CustomException ->{
+                    val logMsg = LogMessageMaker.getFailureLog(
+                        stopWatch = stopWatch,
+                        serviceName = "CommentService",
+                        function = "deleteCmnt",
+                        result = "FAILURE" ,
+                        message = it.message!!,
+                        code = it.errorCode,
+                        path = req.pathVariables(),
+                        param = req.queryParams()
+                    )
+                    logger.error(logMsg)
+                    ok().body(Mono.just(Response(it.errorCode,it.message.toString(),null)))
+                }else ->{
+                    val logMsg = LogMessageMaker.getFailureLog(
+                        stopWatch = stopWatch,
+                        serviceName = "CommentService",
+                        function = "deleteCmnt",
+                        result = "FAILURE" ,
+                        message = it.message!!,
+                        code = 500,
+                        path = req.pathVariables(),
+                        param = req.queryParams()
+                    )
+                    logger.error(logMsg)
+                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                }
+            }
+        }
+    }
+
+    /**
+     * 댓글 수정
+     */
+    fun modifyCmnt(req:ServerRequest): Mono<ServerResponse>{
+        val stopWatch = StopWatch()
+        stopWatch.start()
+        return req.bodyToMono(ModCommentRequest::class.java).switchIfEmpty {
+            throw CustomException.invalidParameter("body")
+        }.flatMap {
+            cmntService.modifyCmnt(req.pathVariable("commentId"),it)
+        }.flatMap {
+            var logMsg = LogMessageMaker.getSuccessLog(
+                stopWatch = stopWatch,
+                serviceName = "CommentService",
+                function = "modifyCmnt",
                 result = "SUCCESS",
                 value = it,
                 path = req.pathVariables(),
@@ -258,25 +238,13 @@ class BoardHandler(val boardService: BoardService) {
             )
             logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it.modifiedCount)))
-        }.switchIfEmpty {
-            var logMsg = LogMessageMaker.getSuccessLog(
-                stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "updateBoard",
-                result = "SUCCESS",
-                value = CodeConfig.MESSAGE_NO_VALUE,
-                path = req.pathVariables(),
-                param = req.queryParams()
-            )
-            logger.info(logMsg)
-            ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
                 is CustomException ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "updateBoard",
+                        serviceName = "CommentService",
+                        function = "modifyCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = it.errorCode,
@@ -288,72 +256,8 @@ class BoardHandler(val boardService: BoardService) {
                 }else ->{
                     val logMsg = LogMessageMaker.getFailureLog(
                         stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "updateBoard",
-                        result = "FAILURE" ,
-                        message = it.message!!,
-                        code = 500,
-                        path = req.pathVariables(),
-                        param = req.queryParams()
-                    )
-                    logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
-                }
-            }
-        }
-    }
-    /**
-     * 게시글 삭제
-     */
-    fun deleteBoard(req:ServerRequest):Mono<ServerResponse>{
-        val stopWatch = StopWatch()
-        stopWatch.start()
-        return Mono.just(req).flatMap {
-            boardService.deleteBoard(it.pathVariable("postId"))
-        }.flatMap {
-            var logMsg = LogMessageMaker.getSuccessLog(
-                stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "deleteBoard",
-                result = "SUCCESS",
-                value = it,
-                path = req.pathVariables(),
-                param = req.queryParams()
-            )
-            logger.info(logMsg)
-            ok().body(Mono.just(Response.ok(it)))
-        }.switchIfEmpty {
-            var logMsg = LogMessageMaker.getSuccessLog(
-                stopWatch = stopWatch,
-                serviceName = "BoardService",
-                function = "deleteBoard",
-                result = "SUCCESS",
-                value = CodeConfig.MESSAGE_NO_VALUE,
-                path = req.pathVariables(),
-                param = req.queryParams()
-            )
-            logger.info(logMsg)
-            ok().body(Mono.just(Response.noValuePresent()))
-        }.onErrorResume {
-            when(it){
-                is CustomException ->{
-                    val logMsg = LogMessageMaker.getFailureLog(
-                        stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "deleteBoard",
-                        result = "FAILURE" ,
-                        message = it.message!!,
-                        code = it.errorCode,
-                        path = req.pathVariables(),
-                        param = req.queryParams()
-                    )
-                    logger.error(logMsg)
-                    ok().body(Mono.just(Response(it.errorCode,it.message.toString(),null)))
-                }else ->{
-                    val logMsg = LogMessageMaker.getFailureLog(
-                        stopWatch = stopWatch,
-                        serviceName = "BoardService",
-                        function = "deleteBoard",
+                        serviceName = "CommentService",
+                        function = "modifyCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
                         code = 500,

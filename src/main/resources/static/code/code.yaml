@@ -9,7 +9,11 @@ definitions:
         type: string
         description: "응답메세지"
         example: "ok"
-  204Error:
+      result:
+        type: number
+        description: "결과"
+        example: 1
+  customException:
     properties:
       code:
         type: number
@@ -18,19 +22,23 @@ definitions:
         type: string
         description: "응답메세지"
     example:
-      - code: 1000001
-        message: "xxx(param) is not exist"
-  400Error:
-    properties:
-      code:
-        type: number
-        decription: "응답코드"
-      message:
-        type: string
-        description: "응답메세지"
-    example:
       - code: 1000002
         message: "xxx(param) is required"
+      - code: 1000003
+        message: "not a valid value type"
+      - code: 1000004
+        message: "xxx is not a valid Predicates"
+      - code: 1000004
+        message: "xxx is not a valid Predicates"
+      - code: 3260001
+        message: "xxx(param) exceeds the maximum value.(max: xxx Characters include blank)"
+      - code: 3260002
+        message: "xxx is not a valid postId"
+      - code: 3260003
+        message: "xxx is not a valid commentId"
+      - code: 3260004
+        message: "xxx is not a valid historyId"
+
   404Error:
     properties:
       code:
