@@ -16,11 +16,7 @@ class BoardRepository(private val template: ReactiveMongoTemplate) {
 
 
     companion object{
-        const val COLLECTION_NM = "boards"
-    }
-
-    fun findOneBoard(){
-
+        const val COLLECTION_NM = "board"
     }
 
     fun findBoardList(agg:Aggregation):Flux<Board>{
@@ -44,8 +40,12 @@ class BoardRepository(private val template: ReactiveMongoTemplate) {
         return template.updateFirst(query,update, COLLECTION_NM)
     }
 
-    fun findOneBoardForModify(query:Query) : Mono<Board> {
+    fun findOneBoard(query: Query):Mono<Board>{
         return template.findOne(query,Board::class.java)
+    }
+
+    fun findExistBoard(query: Query):Mono<Boolean>{
+        return template.exists(query, COLLECTION_NM)
     }
 
 

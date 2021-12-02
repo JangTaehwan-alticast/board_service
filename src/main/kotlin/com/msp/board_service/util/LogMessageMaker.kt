@@ -67,16 +67,22 @@ class LogMessageMaker{
                     serviceName = serviceName,
                     function = function,
                 )
-        fun getSuccessLog(stopWatch: StopWatch, serviceName: String, function: String, result: String, value: Any) =
+        fun getSuccessLog(
+            stopWatch: StopWatch, serviceName: String, function: String, result: String, value: Any, path:Any, param:Any
+        ) =
             LogMessageMaker()
                 .getSuccessLogMsg(
                     stopWatch = stopWatch,
                     serviceName = serviceName,
                     function = function,
                     result = result,
-                    value = value
+                    value = value,
+                    path = path,
+                    param = param
                 )
-        fun getFailureLog(stopWatch: StopWatch, serviceName: String, function: String, result: String, message: String, code: Int) =
+        fun getFailureLog(
+            stopWatch: StopWatch, serviceName: String, function: String, result: String, message: String, code: Int, path:Any, param:Any
+        ) =
             LogMessageMaker()
                 .getFailureLogMsg(
                     stopWatch = stopWatch,
@@ -84,7 +90,9 @@ class LogMessageMaker{
                     function = function,
                     result = result,
                     message = message,
-                    code = code
+                    code = code,
+                    path = path,
+                    param = param
                 )
 
     }
@@ -94,15 +102,19 @@ class LogMessageMaker{
         return "serviceName=$serviceName, function=$function, time=$time ms"
     }
     //serviceName = BoardService, function = insertBoard, time = 40ms, result = SUCCESS, value = {이것저것~}
-    fun getSuccessLogMsg(stopWatch: StopWatch,serviceName: String, function: String, result: String, value:Any):String{
+    fun getSuccessLogMsg(
+        stopWatch: StopWatch,serviceName: String, function: String, result: String, value:Any, path:Any, param:Any
+    ):String{
         stopWatch.stop()
         val time = stopWatch.totalTimeMillis
-        return "serviceName=$serviceName, function=$function, time=$time ms, result=$result, value=$value"
+        return "serviceName=$serviceName, function=$function, time=$time ms, result=$result, value=$value, path=$path, param=$param"
     }
     //serviceName = BoardService, function = insertBoard, time = 40ms, result = FAILURE, message = postId is required, code = 1000002
-    fun getFailureLogMsg(stopWatch: StopWatch,serviceName: String, function: String, result: String, message: String, code : Int):String{
+    fun getFailureLogMsg(
+        stopWatch: StopWatch,serviceName: String, function: String, result: String, message: String, code : Int, path:Any, param:Any
+    ):String{
         stopWatch.stop()
         val time = stopWatch.totalTimeMillis
-        return "serviceName=$serviceName, function=$function, time=$time ms, result=$result, message=$message, code=$code"
+        return "serviceName=$serviceName, function=$function, time=$time ms, result=$result, message=$message, code=$code, path=$path, param=$param"
     }
 }
