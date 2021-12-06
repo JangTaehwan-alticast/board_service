@@ -154,7 +154,7 @@ class BoardService:BoardServiceIn {
             ).`as`("title")
         }else{
             Aggregation.project(
-                "postId","nickName","title","category","createdDate","exposureDate","useYn"
+                "postId","nickName","title","category","createdDate","exposureDate","useYn","contents"
             )
         }
 
@@ -224,6 +224,7 @@ class BoardService:BoardServiceIn {
                                 postId = board.postId,
                                 nickName = board.nickName,
                                 title = board.title,
+                                contents = board.contents,
                                 category = board.category,
                                 createdDate = createdDate
                             )

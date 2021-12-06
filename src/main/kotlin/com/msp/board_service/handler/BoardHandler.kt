@@ -321,7 +321,7 @@ class BoardHandler(val boardService: BoardService) {
                 param = req.queryParams()
             )
             logger.info(logMsg)
-            ok().body(Mono.just(Response.ok(it)))
+            ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
