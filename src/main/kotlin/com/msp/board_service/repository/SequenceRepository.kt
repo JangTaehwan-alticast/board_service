@@ -17,7 +17,7 @@ class SequenceRepository(private val template: ReactiveMongoTemplate) {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
     companion object{
-        const val COLLECTION_NM = "seq"
+        const val COLLECTION_NM = "boardSeq"
     }
 
     fun getNextSeqIdUpdateInc(collectionName: String): Mono<Seq>{

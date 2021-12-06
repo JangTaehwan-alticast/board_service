@@ -7,12 +7,12 @@ import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
 import com.msp.board_service.service.CommentService
 import com.msp.board_service.util.LogMessageMaker
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.util.StopWatch
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.ServerResponse.*
+import org.springframework.web.reactive.function.server.ServerResponse.ok
 import org.springframework.web.reactive.function.server.body
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
@@ -21,7 +21,7 @@ import reactor.core.publisher.switchIfEmpty
 @Component
 class CommentHandler(val cmntService: CommentService) {
 
-    private val logger = KotlinLogging.logger {  }
+    private val logger = LoggerFactory.getLogger(this::class.java)
 
     /**
      * 댓글 리스트 조회
@@ -45,7 +45,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -57,7 +57,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -102,7 +102,7 @@ class CommentHandler(val cmntService: CommentService) {
             throw CustomException.invalidParameter("body")
         }.flatMap {
             cmntService.insertCmmt(req.pathVariable("postId"),it)
-        }.flatMap {
+        }.flatMap { 
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
                 serviceName = "CommentService",
@@ -112,7 +112,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when(it){
@@ -181,7 +181,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.onErrorResume {
             when(it){
@@ -236,7 +236,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it.modifiedCount)))
         }.onErrorResume {
             when(it){

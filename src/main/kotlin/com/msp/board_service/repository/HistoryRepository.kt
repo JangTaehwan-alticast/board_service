@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono
 class HistoryRepository(private val template: ReactiveMongoTemplate) {
 
     companion object{
-        const val COLLECTION_NM = "history"
+        const val COLLECTION_NM = "boardHistory"
     }
 
     fun findBoardHistoryList(query: Query): Flux<ModifyBoardHistory> {

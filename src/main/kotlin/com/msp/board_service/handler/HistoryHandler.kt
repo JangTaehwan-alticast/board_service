@@ -36,7 +36,7 @@ class HistoryHandler(val historyService: HistoryService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when (it) {
@@ -90,7 +90,7 @@ class HistoryHandler(val historyService: HistoryService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when (it) {
@@ -144,7 +144,7 @@ class HistoryHandler(val historyService: HistoryService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.onErrorResume {
             when (it) {

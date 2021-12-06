@@ -3,7 +3,7 @@ package com.msp.board_service.domain
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 
-@Document("seq")
+@Document("boardSeq")
 data class Seq(
     @Id
     var id: String,

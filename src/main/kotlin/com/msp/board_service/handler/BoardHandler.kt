@@ -52,7 +52,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -64,7 +64,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -117,7 +117,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when(it){
@@ -172,7 +172,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -184,7 +184,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -256,7 +256,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it.modifiedCount)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -268,7 +268,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -320,7 +320,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -332,7 +332,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.info(logMsg)
+            logger.debug(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){

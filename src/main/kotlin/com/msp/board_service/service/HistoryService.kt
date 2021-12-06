@@ -110,7 +110,7 @@ class HistoryService: HistoryServiceIn {
                 version = modBoardHistory.version
             )
             val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "HistoryService", "getModHistoryBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             Mono.just(modHistoryBoardResponse)
         }
     }
@@ -147,7 +147,7 @@ class HistoryService: HistoryServiceIn {
             commentRepository.restoreComment(commentList).collectList()
         }.flatMap {
             val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "CommentService", "restoreDeletedBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             historyRepository.deleteBoardHistory(query)
         }
     }
