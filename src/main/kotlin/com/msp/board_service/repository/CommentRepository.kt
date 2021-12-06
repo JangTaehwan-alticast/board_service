@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 class CommentRepository(private val template: ReactiveMongoTemplate) {
 
     companion object{
-        const val COLLECTION_NM = "comment"
+        const val COLLECTION_NM = "boardComment"
     }
 
     fun findCommentList(agg: Aggregation):Flux<Comment>{

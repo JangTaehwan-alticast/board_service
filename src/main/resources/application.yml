@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 41100
 
 default:
   language: en #다국어 반환 시 적용되는 기본언어
@@ -7,24 +7,12 @@ default:
 spring:
   data:
     mongodb:
-      uri: mongodb://127.0.0.1:27017/
-#     uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
-      database: newbie
+#      uri: mongodb://127.0.0.1:27017/
+      uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+#      database: newbie
   application:
     name: board-service
 
-logging:
-  level:
-    root: debug
-
-management:
-  endpoint:
-    health:
-      show-details : ALWAYS
-  endpoints:
-    web:
-      exposure:
-        include: "*"
 
 info:
   app:
@@ -32,3 +20,11 @@ info:
     description: Board Service
     test : local
     version: 1.0.0
+logging:
+  level:
+    org:
+      springframework: debug
+#        data:
+#        mongodb:
+#        core:
+#        ReactiveMongoTemplate: DEBUG

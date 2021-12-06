@@ -101,7 +101,7 @@ class CommentService : CommentServiceIn {
                 createdDate = createdDateRes,
             )
             val logMsg = LogMessageMaker.getFunctionLog(stopWatch,"CommentService","insertComment")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             Mono.just(resCmnt)
         }
     }
@@ -177,7 +177,7 @@ class CommentService : CommentServiceIn {
                     )
                 }
                 resultMap["data"] = commentList
-                logger.info(logMsg)
+                logger.debug(logMsg)
                 Mono.just(resultMap)
             }
         }
@@ -200,7 +200,7 @@ class CommentService : CommentServiceIn {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
             val logMsg = LogMessageMaker.getFunctionLog(stopWatch,"CommentService","deleteCmnt")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             cmntRepository.deleteComment(query)
         }
     }
@@ -239,7 +239,7 @@ class CommentService : CommentServiceIn {
             update.set("contents",modCmntDTO.contents)
             update.set("lastUpdatedDate",updatedDate)
             val logMsg= LogMessageMaker.getFunctionLog(stopWatch,"commentService","modifyBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             cmntRepository.modifyComment(query,update)
         }
     }

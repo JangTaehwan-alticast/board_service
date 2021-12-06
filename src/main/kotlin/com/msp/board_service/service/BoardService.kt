@@ -34,7 +34,7 @@ import java.time.ZoneOffset
 
 
 interface BoardServiceIn {
-    fun getOneBoard(postId:String):Mono<BoardResponse>
+    fun getOneBoard(postId:String):Mono<Any>
     fun getBoardList(
         postId: String, category: String, nickName: String, title: String,
         contents: String, q: String, page: Long, size: Long, orderBy: String, lang: String
@@ -77,7 +77,7 @@ class BoardService:BoardServiceIn {
      *
      * @exception CustomException.invalidPostId 유효하지 않은 postId 인 경우
      */
-    override fun getOneBoard(postId: String): Mono<BoardResponse> {
+    override fun getOneBoard(postId: String): Mono<Any> {
         val query = Query(where("postId").`is`(postId))
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
@@ -208,7 +208,7 @@ class BoardService:BoardServiceIn {
         val listAgg = Aggregation.newAggregation(listAggOps)
 
         val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "getBoardList")
-        logger.info(logMsg)
+        logger.debug(logMsg)
         return boardRepository.findBoardCount(countAgg).flatMap { total->
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
@@ -296,7 +296,7 @@ class BoardService:BoardServiceIn {
                 createdDate = createdDate
             )
             var logMsg = LogMessageMaker.getFunctionLog(stopWatch,"BoardService","insertBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             Mono.just(resBoard)
         }
 
@@ -340,7 +340,7 @@ class BoardService:BoardServiceIn {
             commentRepository.deleteComment(query)
         }.flatMap {
             val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "deleteBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             boardRepository.deleteBoard(query)
         }
     }
@@ -425,7 +425,7 @@ class BoardService:BoardServiceIn {
             }
             update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
             val logMsg= LogMessageMaker.getFunctionLog(stopWatch,"BoardService","modifyBoard")
-            logger.info(logMsg)
+            logger.debug(logMsg)
             boardRepository.modifyBoard(query,update)
         }
     }
