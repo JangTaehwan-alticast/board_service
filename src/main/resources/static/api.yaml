@@ -99,9 +99,9 @@ paths:
           name: "orderBy"
           description: "정렬 기준 (default createdDate desc)"
         - in: "query"
-          type: number
+          type: string
           name: "lang"
-          description: "다국어 (default all)"
+          description: "다국어 (default all ex: en, ko ...)"
       responses:
         "200":
           description: "return board"
