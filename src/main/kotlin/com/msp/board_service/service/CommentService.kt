@@ -71,11 +71,11 @@ class CommentService : CommentServiceIn {
             if(insertCmntDTO.nickName.isNullOrEmpty()){
                 return@flatMap Mono.error(CustomException.invalidParameter("nickName"))
             }else if(insertCmntDTO.nickName!!.length > 20){
-                return@flatMap Mono.error(CustomException.exceedMaxValue("nickName",insertCmntDTO.nickName!!.substring(15),20))
+                return@flatMap Mono.error(CustomException.exceedMaxValue("nickName",insertCmntDTO.nickName!!.substring(0,15),20))
             }else if(insertCmntDTO.contents.isNullOrEmpty()){
                 return@flatMap Mono.error(CustomException.invalidParameter("contents"))
             }else if(insertCmntDTO.contents!!.length > 255){
-                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",insertCmntDTO.contents!!.substring(15),255))
+                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",insertCmntDTO.contents!!.substring(0,15),255))
             }
             seqRepository.getNextSeqIdUpdateInc("comment")
         }.flatMap { seq ->

@@ -13,11 +13,10 @@ definitions:
       createdDate:
         type: string
         description: "댓글 작성일"
-      updatedDate:
+      lastUpdatedDate:
         type: string
         description: "댓글 수정일"
     example:
-      postId: "post_1"
       nickName: "user123"
       contents: "댓글내용"
   ResponseCommentResult:
@@ -103,26 +102,10 @@ definitions:
           createdDate: "2021-11-17T04:49:42"
   ModifyComment:
     properties:
-      commentId:
-        type: string
-        decription: "게시글의 아이디"
-        example: "comment_66"
-      postId:
-        type: string
-        decription: "댓글의 아이디"
-        example: "post_2"
-      nickName:
-        type: string
-        decription: "댓글의 작성자 닉네임"
-        example: "댓글작성자"
       contents:
         type: string
         description: "수정 할 댓글 내용"
         example: "수정 내용입니다."
-      updatedDate:
-        type: integer
-        description: "수정날짜"
-        example: 1637654470
   ResponseModifyCommentResult:
     properties:
       code:

@@ -274,7 +274,7 @@ class BoardService:BoardServiceIn {
             }else if(board.contents.isNullOrEmpty()){                                           //내용 누락
                 return@flatMap Mono.error(CustomException.invalidParameter("contents"))
             }else if(board.contents!!.length>255){                                              //내용 길이 초과
-                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",board.contents!!.substring(15)+"...",255))
+                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",board.contents!!.substring(0,15)+"...",255))
             }
             if(board.category.isNullOrEmpty()){
                 board.category = "all"
@@ -367,10 +367,22 @@ class BoardService:BoardServiceIn {
         var modifyBoardHistory = ModifyBoardHistory()
 
         return boardRepository.findExistBoard(query).flatMap {
-            if(!it)
+            if(!it){
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
-            if(modBoardDTO.modifier.isNullOrEmpty()){
+            }else if(modBoardDTO.modifier.isNullOrEmpty()){
                 return@flatMap Mono.error(CustomException.invalidParameter("modifier"))
+            }else if(modBoardDTO.modifier!!.length > 20){
+                return@flatMap Mono.error(CustomException.exceedMaxValue("modifier",modBoardDTO.modifier!!.substring(0,15)+"...",20))
+            }else if(!modBoardDTO.contents.isNullOrEmpty()){
+                if(modBoardDTO.contents!!.length > 255)
+                    return@flatMap Mono.error(CustomException.exceedMaxValue("contents",modBoardDTO.contents!!.substring(0,15)+"...",255))
+            }else if(!modBoardDTO.title.isNullOrEmpty()){
+                modBoardDTO.title!!.forEach { multiLang ->
+                    if(multiLang.value.length>50) {
+                        return@flatMap Mono.error(CustomException
+                            .exceedMaxValue("title", multiLang.value.substring(0, 15) + "...", 50))
+                    }
+                }
             }
             seqRepository.getNextSeqIdUpdateInc("history")
         }.flatMap { seq ->
@@ -404,25 +416,13 @@ class BoardService:BoardServiceIn {
             historyRepository.insertBoardHistory(modifyBoardHistory)
         }.flatMap {
             var update = Update()
-            modBoardDTO.title?.let { title ->
-                title.forEach { multiLang ->
-                    if(multiLang.value.length>50) {
-                        return@flatMap Mono.error(CustomException
-                            .exceedMaxValue("title", multiLang.value.substring(0, 15) + "...", 50))
-                    }
-                }
+            modBoardDTO.title?.let {
                 update.set("title",modBoardDTO.title)
             }
-            modBoardDTO.contents?.let { contents ->
-                if(contents.length > 255)
-                    throw CustomException.exceedMaxValue("contents",contents.substring(15)+"...",255)
+            modBoardDTO.contents?.let {
                 update.set("contents",modBoardDTO.contents)
             }
-            modBoardDTO.modifier?.let { modifier ->
-                if(modifier.length > 20)
-                    throw CustomException.exceedMaxValue("modifier",modifier.substring(20)+"...",20)
-                update.set("modifier",modBoardDTO.modifier)
-            }
+            update.set("modifier",modBoardDTO.modifier)
             update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
             val logMsg= LogMessageMaker.getFunctionLog(stopWatch,"BoardService","modifyBoard")
             logger.debug(logMsg)
@@ -503,7 +503,11 @@ class BoardService:BoardServiceIn {
             paramList.forEach {
                 var param = it.split("%")
                 if(param.size == 2){
-                    var paramName = param[0]
+                    var paramName = if(param[0] == "title"){
+                        "title.value"
+                    }else{
+                        param[0]
+                    }
                     var paramValues = param[1].split("?")
                     if(paramValues.size == 2){
                         var valueType = "string"

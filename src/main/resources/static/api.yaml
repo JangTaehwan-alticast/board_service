@@ -95,9 +95,9 @@ paths:
           name: "size"
           description: "페이지 사이즈 (default:10)"
         - in: "query"
-          type: number
+          type: string
           name: "orderBy"
-          description: "정렬 기준 (default createdDate desc)"
+          description: "정렬 기준 (default createdDate:1 desc)"
         - in: "query"
           type: string
           name: "lang"
