@@ -456,7 +456,7 @@ class BoardService:BoardServiceIn {
     ): Criteria {
         var criteria = Criteria()
         var andCriteria = ArrayList<Criteria>()
-        andCriteria.add(MakeWhereCriteria.makeWhereCriteria("exposureDate","le",now.toString(),"Long"))
+        andCriteria.add(MakeWhereCriteria.makeWhereCriteria("exposureDate","le",now.toString(),"long"))
         if(!postId.isNullOrEmpty()){
             var paramValue = postId.split("?")
             if(paramValue.size == 2){
