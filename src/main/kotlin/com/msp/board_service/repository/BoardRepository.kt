@@ -23,6 +23,10 @@ class BoardRepository(private val template: ReactiveMongoTemplate) {
         return template.aggregate(agg, COLLECTION_NM,Board::class.java)
     }
 
+    fun findBoardMapList(agg: Aggregation): Flux<Map<*,*>>{
+        return template.aggregate(agg, COLLECTION_NM, Map::class.java)
+    }
+
     fun findBoardCount(agg:Aggregation):Mono<Long>{
         return template.aggregate(agg, COLLECTION_NM,Any::class.java).count()
     }
