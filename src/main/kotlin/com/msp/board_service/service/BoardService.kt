@@ -206,6 +206,12 @@ class BoardService:BoardServiceIn {
         val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "getBoardList")
         logger.debug(logMsg)
 
+//        val countAgg : AggregationOperation = Aggregation.group("postId").count().`as`("TotalCount")
+//        listAggOps.add(countAgg)
+//        boardRepository.findBoardMapList(listAggOps).flatMap {
+//
+//        }
+
         return boardRepository.findBoardList(listAgg).collectList().flatMap { resultBoardList ->
             val boardList = ArrayList<BoardListResponse>()
             val resultMap = HashMap<String, Any>()
@@ -224,7 +230,7 @@ class BoardService:BoardServiceIn {
                     )
                 )
             }
-            resultMap["data"] = resultBoardList
+            resultMap["data"] = boardList
             resultMap["total"] = boardList.size
             Mono.just(resultMap)
         }
@@ -234,7 +240,6 @@ class BoardService:BoardServiceIn {
     /**
      * 게시글 입력
      * @param board 게시글 입력 필드
-     *
      * @suppress 1. 필수 파라미터 유효성 검증
      * 2. board seq 생성 및 boardId 부여
      * 3. 노출시각 예약이 존재할 경우 반영 없으면 현재시각으로 설정

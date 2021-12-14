@@ -22,8 +22,9 @@ info:
     version: 1.0.0
 logging:
   level:
-    org:
-      springframework: debug
+    root: debug
+#    org:
+#      springframework: debug
 #        data:
 #        mongodb:
 #        core:
