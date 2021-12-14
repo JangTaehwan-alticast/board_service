@@ -138,7 +138,6 @@ class BoardService:BoardServiceIn {
 
         val stopWatch = StopWatch()
         stopWatch.start()
-        val countAggOps = ArrayList<AggregationOperation>()//검색 결과 total count Agg
         val listAggOps = ArrayList<AggregationOperation>()//list 검색용 Agg
         //select
         val project: ProjectionOperation = if(!lang.isNullOrEmpty()){
@@ -169,7 +168,6 @@ class BoardService:BoardServiceIn {
         val match: AggregationOperation = Aggregation.match(criteria)
 
         listAggOps.add(match)
-        countAggOps.add(match)
 
         //orderBy
         var orderArr = arrayOf("createdDate:-1")
@@ -204,46 +202,44 @@ class BoardService:BoardServiceIn {
         listAggOps.add(skip)
         listAggOps.add(limit)
 
-        val countAgg = Aggregation.newAggregation(countAggOps)
         val listAgg = Aggregation.newAggregation(listAggOps)
-
         val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "getBoardList")
         logger.debug(logMsg)
-        return boardRepository.findBoardCount(countAgg).flatMap { total->
+
+//        val countAgg : AggregationOperation = Aggregation.group("postId").count().`as`("TotalCount")
+//        listAggOps.add(countAgg)
+//        boardRepository.findBoardMapList(listAggOps).flatMap {
+//
+//        }
+
+        return boardRepository.findBoardList(listAgg).collectList().flatMap { resultBoardList ->
+            val boardList = ArrayList<BoardListResponse>()
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
             resultMap["size"] = limitValue
-            resultMap["total"] = total
-            val boardList = ArrayList<BoardListResponse>()
-            if(total > 0L){
-                boardRepository.findBoardList(listAgg).collectList().flatMap { oriBoardList ->
-                    oriBoardList.forEach{ board ->
-                        val createdDate = CommonService.epochToString(board.createdDate!!)
-                        boardList.add(
-                            BoardListResponse(
-                                postId = board.postId,
-                                nickName = board.nickName,
-                                title = board.title,
-                                contents = board.contents,
-                                category = board.category,
-                                createdDate = createdDate
-                            )
-                        )
-                    }
-                    resultMap["data"] = boardList
-                    Mono.just(resultMap)
-                }
-            }else{
-                resultMap["data"] = boardList
-                Mono.just(resultMap)
+            resultBoardList.forEach{ board ->
+                val createdDate = CommonService.epochToString(board.createdDate!!)
+                boardList.add(
+                    BoardListResponse(
+                        postId = board.postId,
+                        nickName = board.nickName,
+                        title = board.title,
+                        contents = board.contents,
+                        category = board.category,
+                        createdDate = createdDate
+                    )
+                )
             }
+            resultMap["data"] = boardList
+            resultMap["total"] = boardList.size
+            Mono.just(resultMap)
         }
+
     }
 
     /**
      * 게시글 입력
      * @param board 게시글 입력 필드
-     *
      * @suppress 1. 필수 파라미터 유효성 검증
      * 2. board seq 생성 및 boardId 부여
      * 3. 노출시각 예약이 존재할 경우 반영 없으면 현재시각으로 설정
