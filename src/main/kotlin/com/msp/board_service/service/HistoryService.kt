@@ -48,14 +48,20 @@ class HistoryService: HistoryServiceIn {
      * 2. time format 변환 후 응답
      */
     override fun getModHistoryBoardList(postId: String): Mono<Any> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("getModHistoryBoardList param : postId= $postId")
+
+        val stopWatch = StopWatch("getModHistoryBoardList")
+        stopWatch.start("Count Board History")
+
         val query = Query(where("postId").`is`(postId).and("type").`is`("PATCH"))
         val historyList = ArrayList<ModHistoryListResponse>()
         return historyRepository.countHistoryBoard(query).flatMap { total->
             val resultMap = HashMap<String, Any>()
             resultMap["total"] = total
+
+            stopWatch.stop()
             if(total > 0L) {
+                stopWatch.start("Get Mod History List")
                 historyRepository.findBoardHistoryList(query).collectList().flatMap { modHistoryList ->
                     modHistoryList.forEach { modBoardHistory ->
                         var updatedDate =
@@ -71,10 +77,19 @@ class HistoryService: HistoryServiceIn {
                         )
                     }
                     resultMap["data"] = historyList
+
+                    stopWatch.stop()
+                    logger.info("${stopWatch.prettyPrint()}")
+                    logger.info("getModHistoryBoardList time : ${stopWatch.totalTimeMillis}ms.")
+
                     Mono.just(resultMap)
                 }
             }else{
                 resultMap["data"] = historyList
+
+                logger.info("${stopWatch.prettyPrint()}")
+                logger.info("getModHistoryBoardList time : ${stopWatch.totalTimeMillis}ms.")
+
                 Mono.just(resultMap)
             }
 
@@ -91,12 +106,19 @@ class HistoryService: HistoryServiceIn {
      * @exception CustomException.invalidHistoryId 유효하지 않은 historyId 입력시
      */
     override fun getModHistoryBoard(historyId: String): Mono<Any> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("getModHistoryBoard param : historyId= $historyId")
+
+        val stopWatch = StopWatch("getModHistoryBoard")
+        stopWatch.start("Validation historyId")
+
         val query = Query(where("historyId").`is`(historyId).and("type").`is`("PATCH"))
         return historyRepository.findExistHistoryBoard(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidHistoryId(historyId))
+
+            stopWatch.stop()
+            stopWatch.start("Find Modify Board History And Convert To DTO")
+
             historyRepository.findModBoardHistory(query)
         }.flatMap { modBoardHistory ->
             var updatedDate = CommonService.epochToString(modBoardHistory.updatedDate!!)
@@ -109,8 +131,11 @@ class HistoryService: HistoryServiceIn {
                 updatedDate = updatedDate,
                 version = modBoardHistory.version
             )
-            val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "HistoryService", "getModHistoryBoard")
-            logger.debug(logMsg)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("getModHistoryBoard param : ${stopWatch.totalTimeMillis}ms.")
+
             Mono.just(modHistoryBoardResponse)
         }
     }
@@ -127,13 +152,20 @@ class HistoryService: HistoryServiceIn {
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      */
     override fun restoreDeletedBoard(postId: String): Mono<DeleteResult> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("restoreDeletedBoard param : postId = $postId")
+
+        val stopWatch = StopWatch("restoreDeletedBoard")
+        stopWatch.start("Validation PostId")
+
         val query = Query(where("postId").`is`(postId).and("type").`is`("DELETE"))
         var commentList = ArrayList<Comment>()
         return historyRepository.findExistHistoryBoard(query).flatMap {
             if (!it)
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
+
+            stopWatch.stop()
+            stopWatch.start("Find Deleted Board From History Collection")
+
             historyRepository.findDeleteBoardHistory(query)
         }.flatMap { deleteBoardHistory ->
             commentList = if (!deleteBoardHistory.comment.isNullOrEmpty()) {
@@ -142,13 +174,21 @@ class HistoryService: HistoryServiceIn {
                 ArrayList()
             }
             deleteBoardHistory.board!!.useYn = "11"
+
+            stopWatch.stop()
+            stopWatch.start("Restore Board&Comment And Delete History")
+
             boardRepository.insertBoard(deleteBoardHistory.board!!)
         }.flatMap {
             commentRepository.restoreComment(commentList).collectList()
         }.flatMap {
-            val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "CommentService", "restoreDeletedBoard")
-            logger.debug(logMsg)
-            historyRepository.deleteBoardHistory(query)
+            val deleteBoardHistory = historyRepository.deleteBoardHistory(query)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("${stopWatch.totalTimeMillis}ms.")
+
+            deleteBoardHistory
         }
     }
 }
