@@ -2,6 +2,7 @@ package com.msp.board_service.handler
 
 import com.msp.board_service.config.CodeConfig
 import com.msp.board_service.domain.Board
+import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
@@ -17,6 +18,8 @@ import org.springframework.web.reactive.function.server.body
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
+import javax.validation.Validation
+import javax.xml.validation.Validator
 
 @Component
 class BoardHandler(val boardService: BoardService) {
@@ -52,7 +55,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -64,7 +67,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -117,7 +120,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when(it){
@@ -158,10 +161,14 @@ class BoardHandler(val boardService: BoardService) {
     fun insertBoard(req:ServerRequest) : Mono<ServerResponse> {
         val stopWatch = StopWatch()
         stopWatch.start()
-        return req.bodyToMono(Board::class.java).switchIfEmpty {
-            throw CustomException.invalidParameter("body")
-        }.flatMap {
-            this.boardService.insertBoard(it)
+        return req.bodyToMono(InsertBoardRequest::class.java).flatMap { insertBoardRequest ->
+            val validator = Validation.buildDefaultValidatorFactory().validator.validate(insertBoardRequest)
+            if(validator.isNotEmpty())
+                return@flatMap Mono.error(CustomException.validation(
+                    message = validator.first().message,
+                    field = validator.first().propertyPath
+                ))
+            this.boardService.insertBoard(insertBoardRequest)
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
@@ -172,7 +179,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -184,7 +191,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -245,6 +252,12 @@ class BoardHandler(val boardService: BoardService) {
         return req.bodyToMono(ModBoardRequest::class.java).switchIfEmpty {
             throw CustomException.invalidParameter("body")
         }.flatMap { modBoardRequest ->
+            val validator = Validation.buildDefaultValidatorFactory().validator.validate(modBoardRequest)
+            if(validator.isNotEmpty())
+                return@flatMap Mono.error(CustomException.validation(
+                    message = validator.first().message,
+                    field = validator.first().propertyPath
+                ))
             boardService.modifyBoard(req.pathVariable("postId"),modBoardRequest)
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -256,7 +269,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it.modifiedCount)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -268,7 +281,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -320,7 +333,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -332,7 +345,7 @@ class BoardHandler(val boardService: BoardService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){

@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.server.body
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
+import javax.validation.Validation
 
 @Component
 class CommentHandler(val cmntService: CommentService) {
@@ -45,7 +46,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.switchIfEmpty {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -57,7 +58,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.noValuePresent()))
         }.onErrorResume {
             when(it){
@@ -95,13 +96,19 @@ class CommentHandler(val cmntService: CommentService) {
     /**
      * 댓글 입력
      */
-    fun insertCmmt(req:ServerRequest): Mono<ServerResponse>{
+    fun insertCmnt(req:ServerRequest): Mono<ServerResponse>{
         val stopWatch = StopWatch()
         stopWatch.start()
         return req.bodyToMono(InsertCommentRequest::class.java).switchIfEmpty {
             throw CustomException.invalidParameter("body")
-        }.flatMap {
-            cmntService.insertCmmt(req.pathVariable("postId"),it)
+        }.flatMap { insertCmntRequest ->
+            val validator = Validation.buildDefaultValidatorFactory().validator.validate(insertCmntRequest)
+            if(validator.isNotEmpty())
+                return@flatMap Mono.error(CustomException.validation(
+                    message = validator.first().message,
+                    field = validator.first().propertyPath
+                ))
+            cmntService.insertCmnt(req.pathVariable("postId"),insertCmntRequest)
         }.flatMap { 
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
@@ -112,7 +119,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it)))
         }.onErrorResume {
             when(it){
@@ -181,7 +188,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it.deletedCount)))
         }.onErrorResume {
             when(it){
@@ -224,8 +231,14 @@ class CommentHandler(val cmntService: CommentService) {
         stopWatch.start()
         return req.bodyToMono(ModCommentRequest::class.java).switchIfEmpty {
             throw CustomException.invalidParameter("body")
-        }.flatMap {
-            cmntService.modifyCmnt(req.pathVariable("commentId"),it)
+        }.flatMap { modCmntRequest ->
+            val validator = Validation.buildDefaultValidatorFactory().validator.validate(modCmntRequest)
+            if(validator.isNotEmpty())
+                return@flatMap Mono.error(CustomException.validation(
+                    message = validator.first().message,
+                    field = validator.first().propertyPath
+                ))
+            cmntService.modifyCmnt(req.pathVariable("commentId"),modCmntRequest)
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
                 stopWatch = stopWatch,
@@ -236,7 +249,7 @@ class CommentHandler(val cmntService: CommentService) {
                 path = req.pathVariables(),
                 param = req.queryParams()
             )
-            logger.debug(logMsg)
+            logger.info(logMsg)
             ok().body(Mono.just(Response.ok(it.modifiedCount)))
         }.onErrorResume {
             when(it){

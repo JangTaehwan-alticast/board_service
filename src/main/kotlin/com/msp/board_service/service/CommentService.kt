@@ -12,7 +12,6 @@ import com.msp.board_service.repository.BoardRepository
 import com.msp.board_service.repository.CommentRepository
 import com.msp.board_service.repository.SequenceRepository
 import com.msp.board_service.util.CommonService
-import com.msp.board_service.util.LogMessageMaker
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.mongodb.core.aggregation.Aggregation
@@ -25,7 +24,7 @@ import org.springframework.util.StopWatch
 import reactor.core.publisher.Mono
 
 interface CommentServiceIn {
-    fun insertCmmt(postId: String, InsertCmntDTO:InsertCommentRequest): Mono<Any>
+    fun insertCmnt(postId: String, InsertCmntDTO:InsertCommentRequest): Mono<Any>
     fun findCmntList(postId: String, size: Long, page: Long): Mono<Any>
     fun deleteCmnt(commentId: String): Mono<DeleteResult>
     fun modifyCmnt(commentId: String, ModCmntDTO:ModCommentRequest): Mono<UpdateResult>
@@ -48,7 +47,7 @@ class CommentService : CommentServiceIn {
     /**
      * 댓글 입력
      * @param postId 댓글 대상 게시글의 아이디
-     * @param insertCmntDTO 댓글입력용 DTO
+     * @param param 댓글입력용 DTO
      * @suppress 1. 필수 파라미터 유효성 검증
      * 2. 대상 게시글 존재하는지 판단
      * 3. comment seq 생성 및 commentId 부여
@@ -58,9 +57,11 @@ class CommentService : CommentServiceIn {
      * @exception CustomException.exceedMaxValue 필드의 maxValue 초과시
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      */
-    override fun insertCmmt(postId: String, insertCmntDTO: InsertCommentRequest): Mono<Any> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+    override fun insertCmnt(postId: String, param: InsertCommentRequest): Mono<Any> {
+        logger.info("insertCmnt param : postId= $postId, $param ")
+
+        val stopWatch = StopWatch("insertCmnt")
+        stopWatch.start("Validation PostId")
 
         var commentId = ""
         var query = Query.query(Criteria.where("postId").`is`(postId))
@@ -68,40 +69,45 @@ class CommentService : CommentServiceIn {
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
-            if(insertCmntDTO.nickName.isNullOrEmpty()){
-                return@flatMap Mono.error(CustomException.invalidParameter("nickName"))
-            }else if(insertCmntDTO.nickName!!.length > 20){
-                return@flatMap Mono.error(CustomException.exceedMaxValue("nickName",insertCmntDTO.nickName!!.substring(0,15),20))
-            }else if(insertCmntDTO.contents.isNullOrEmpty()){
-                return@flatMap Mono.error(CustomException.invalidParameter("contents"))
-            }else if(insertCmntDTO.contents!!.length > 255){
-                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",insertCmntDTO.contents!!.substring(0,15),255))
-            }
+
+            stopWatch.stop()
+            stopWatch.start("Get Comment Sequence And Update")
+
             seqRepository.getNextSeqIdUpdateInc("comment")
         }.flatMap { seq ->
+
+            stopWatch.stop()
+            stopWatch.start("Make Comment Entity And Insert Comment Collection")
+
             commentId = "comment_${seq.seq}"
-            Mono.just(commentId)
             val createdDate = CommonService.getNowEpochTime()
             var comment = Comment(
                 postId = postId,
                 commentId = commentId,
-                nickName = insertCmntDTO.nickName,
-                contents = insertCmntDTO.contents,
+                nickName = param.nickName,
+                contents = param.contents,
                 createdDate = createdDate,
                 lastUpdatedDate = createdDate
             )
             cmntRepository.insertComment(comment)
         }.flatMap { Comment ->
+
+            stopWatch.stop()
+            stopWatch.start("Convert Comment To DTO")
+
             val createdDateRes = CommonService.epochToString(Comment.createdDate!!)
             var resCmnt = InsertCommentResponse(
                 postId = postId,
                 commentId = commentId,
-                nickName = insertCmntDTO.nickName,
-                contents = insertCmntDTO.contents,
+                nickName = param.nickName,
+                contents = param.contents,
                 createdDate = createdDateRes,
             )
-            val logMsg = LogMessageMaker.getFunctionLog(stopWatch,"CommentService","insertComment")
-            logger.debug(logMsg)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("insertCmnt time : ${stopWatch.totalTimeMillis}ms.")
+
             Mono.just(resCmnt)
         }
     }
@@ -118,24 +124,33 @@ class CommentService : CommentServiceIn {
      * 3. 댓글 count 및 반환
      */
     override fun findCmntList(postId: String, size: Long, page: Long): Mono<Any> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("findCmntList param : postId= $postId, size= $size, page= $page")
+
+        val stopWatch = StopWatch("findCmntList")
+        stopWatch.start("Make Aggregation")
 
         val countAggOps = ArrayList<AggregationOperation>()
         val listAggOps = ArrayList<AggregationOperation>()
 
-        //select
+        /**
+         * Document field select
+         */
         val project = Aggregation.project(
             "postId","commentId","nickName","contents","createdDate","lastUpdatedDate"
         )
         listAggOps.add(project)
-        //where
+
+        /**
+         * where Criteria 추가
+         */
         val criteria = Criteria.where("postId").`is`(postId)
         val match = Aggregation.match(criteria)
         listAggOps.add(match)
         countAggOps.add(match)
 
-        // paging
+        /**
+         * paging
+         */
         val limitValue = if (size > 0L) {
             size
         } else {
@@ -154,14 +169,24 @@ class CommentService : CommentServiceIn {
         val countAgg = Aggregation.newAggregation(countAggOps)
         val listAgg = Aggregation.newAggregation(listAggOps)
 
-        val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "getBoardList")
+        stopWatch.stop()
+        stopWatch.start("Count Total Cmnt")
+
         return cmntRepository.findCommentCount(countAgg).flatMap { total ->
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
             resultMap["size"] = limitValue
             resultMap["total"] = total
             val commentList = ArrayList<CommentResponse>()
+
+            stopWatch.stop()
+            stopWatch.start("Find Cmnt List")
+
             cmntRepository.findCommentList(listAgg).collectList().flatMap { oriComment ->
+
+                stopWatch.stop()
+                stopWatch.start("Convert Cmnt To DTO And Add List")
+
                 oriComment.forEach { comment ->
                     val createdDate  = CommonService.epochToString(comment.createdDate!!)
                     val updatedDate  = CommonService.epochToString(comment.lastUpdatedDate!!)
@@ -177,7 +202,11 @@ class CommentService : CommentServiceIn {
                     )
                 }
                 resultMap["data"] = commentList
-                logger.debug(logMsg)
+
+                stopWatch.stop()
+                logger.info("${stopWatch.prettyPrint()}")
+                logger.info("findCmntList time : ${stopWatch.totalTimeMillis}ms.")
+
                 Mono.just(resultMap)
             }
         }
@@ -193,22 +222,33 @@ class CommentService : CommentServiceIn {
      * @exception CustomException.invalidCommentId 유효하지 않은 commentId 입력시
      */
     override fun deleteCmnt(commentId: String): Mono<DeleteResult> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("deleteCmnt param : commentId= $commentId")
+
+        val stopWatch = StopWatch("deleteCmnt")
+        stopWatch.start("Validation commentId")
+
         val query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
-            val logMsg = LogMessageMaker.getFunctionLog(stopWatch,"CommentService","deleteCmnt")
-            logger.debug(logMsg)
-            cmntRepository.deleteComment(query)
+
+            stopWatch.stop()
+            stopWatch.start("Delete Comment From Collection")
+
+            val deleteComment = cmntRepository.deleteComment(query)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("deleteCmnt time : ${stopWatch.totalTimeMillis}")
+
+            deleteComment
         }
     }
 
     /**
      * 댓글 수정
      * @param commentId 수정 대상댓글의 아이디
-     * @param modCmntDTO 수정 필드 DTO
+     * @param param 수정 필드 DTO
      *
      * @suppress 1. 대상 댓글 존재하는지 판단
      * 2. 수정 필드 유효성 검증
@@ -219,28 +259,32 @@ class CommentService : CommentServiceIn {
      * @exception CustomException.invalidParameter 필수 파라미터 누락시
      * @exception CustomException.exceedMaxValue 필드 최대값 초과시
      */
-    override fun modifyCmnt(commentId: String, modCmntDTO: ModCommentRequest): Mono<UpdateResult> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+    override fun modifyCmnt(commentId: String, param: ModCommentRequest): Mono<UpdateResult> {
+        logger.info("modifyCmnt param : commentId= $commentId, $param")
+
+        val stopWatch = StopWatch("modifyCmnt")
+        stopWatch.start("Validation commentId")
+
         var query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
-            if(modCmntDTO.contents.isNullOrEmpty())
-                return@flatMap Mono.error(
-                    CustomException.invalidParameter("contents")
-                )
-            else if(modCmntDTO.contents!!.length > 255)
-                return@flatMap Mono.error(
-                    CustomException.exceedMaxValue("contents",modCmntDTO.contents!!.substring(0,15)+"...",255)
-                )
+
+            stopWatch.stop()
+            stopWatch.start("Update Cmnt Collection")
+
             var updatedDate = CommonService.getNowEpochTime()
             var update = Update()
-            update.set("contents",modCmntDTO.contents)
+            update.set("contents",param.contents)
             update.set("lastUpdatedDate",updatedDate)
-            val logMsg= LogMessageMaker.getFunctionLog(stopWatch,"commentService","modifyBoard")
-            logger.debug(logMsg)
-            cmntRepository.modifyComment(query,update)
+
+            val modifyComment = cmntRepository.modifyComment(query, update)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("${stopWatch.totalTimeMillis}ms.")
+
+            modifyComment
         }
     }
 }

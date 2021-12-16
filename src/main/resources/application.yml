@@ -7,9 +7,9 @@ default:
 spring:
   data:
     mongodb:
-#      uri: mongodb://127.0.0.1:27017/
-      uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
-#      database: newbie
+      uri: mongodb://127.0.0.1:27017/
+#      uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+      database: newbie
   application:
     name: board-service
 
@@ -20,12 +20,12 @@ info:
     description: Board Service
     test : local
     version: 1.0.0
+
 logging:
-  level:
-    root: debug
-#    org:
-#      springframework: debug
-#        data:
-#        mongodb:
-#        core:
-#        ReactiveMongoTemplate: DEBUG
+  file:
+    path: /Users/admin/Downloads/신입자료/연수/board_service/logs
+
+
+
+
+

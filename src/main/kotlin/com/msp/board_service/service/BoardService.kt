@@ -5,6 +5,7 @@ import com.mongodb.client.result.UpdateResult
 import com.msp.board_service.domain.Board
 import com.msp.board_service.domain.DeleteBoardHistory
 import com.msp.board_service.domain.ModifyBoardHistory
+import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
 import com.msp.board_service.domain.response.BoardListResponse
 import com.msp.board_service.domain.response.BoardResponse
@@ -39,10 +40,9 @@ interface BoardServiceIn {
         postId: String, category: String, nickName: String, title: String,
         contents: String, q: String, page: Long, size: Long, orderBy: String, lang: String
     ):Mono<Any>
-    fun insertBoard(board: Board): Mono<InsertBoardResponse>
+    fun insertBoard(param: InsertBoardRequest): Mono<InsertBoardResponse>
     fun deleteBoard(postId:String):Mono<DeleteResult>
     fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
-
 }
 
 
@@ -66,7 +66,6 @@ class BoardService:BoardServiceIn {
     @Autowired
     lateinit var commonService: CommonService
 
-
     /**
      * 게시판 글 단건 조회
      * @param postId 조회하고자 하는 게시글의 아이디
@@ -78,28 +77,45 @@ class BoardService:BoardServiceIn {
      * @exception CustomException.invalidPostId 유효하지 않은 postId 인 경우
      */
     override fun getOneBoard(postId: String): Mono<Any> {
+        logger.info("getOneBoard Param : $postId")
+
+        val stopWatch = StopWatch("getOneBoard")
+
+        stopWatch.start("Validation PostId")
         val query = Query(where("postId").`is`(postId))
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
+
+            stopWatch.stop()
+            stopWatch.start("Find Board From Collection")
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
+
+            stopWatch.stop()
+            stopWatch.start("Convert Board To DTO")
+
             val createdDate = CommonService.epochToString(board.createdDate!!)
-            var lastUpdatedDate = board.lastUpdatedDate?:"0"
-            lastUpdatedDate = if(lastUpdatedDate == "0"){
+            val lastUpdatedDate = if(board.lastUpdatedDate == null || board.lastUpdatedDate!! <= 0){
                 createdDate
             }else{
                 CommonService.epochToString(board.lastUpdatedDate!!)
             }
-            Mono.just(BoardResponse(
-                postId= board.postId,
+
+            val boardResponse = BoardResponse(
+                postId = board.postId,
                 nickName = board.nickName,
                 category = board.category,
                 title = board.title,
                 contents = board.contents,
                 createdDate = createdDate,
                 lastUpdatedDate = lastUpdatedDate,
-            ))
+            )
+            stopWatch.stop()
+
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("getOneBoard time : ${stopWatch.totalTimeMillis}ms.")
+            Mono.just(boardResponse)
         }
     }
 
@@ -135,11 +151,16 @@ class BoardService:BoardServiceIn {
         orderBy: String,
         lang: String
     ): Mono<Any> {
+        logger.info("getBoardList Param : postId= $postId, category= $category, nickName= $nickName, title= $title, contents= $contents, q= $q, page= $page, size= $size, orderBy= $orderBy, lang= $lang")
+        val stopWatch = StopWatch("getBoardList")
+        stopWatch.start("Make Aggregation")
 
-        val stopWatch = StopWatch()
-        stopWatch.start()
-        val listAggOps = ArrayList<AggregationOperation>()//list 검색용 Agg
-        //select
+        val listAggOps = ArrayList<AggregationOperation>()
+
+        /**
+         * Document 에서 필요한 field 정의
+         * 다국어 처리도 같이 실행
+         */
         val project: ProjectionOperation = if(!lang.isNullOrEmpty()){
             Aggregation.project(
                 "postId","nickName","title","category","createdDate","exposureDate","useYn","contents"
@@ -156,12 +177,13 @@ class BoardService:BoardServiceIn {
                 "postId","nickName","title","category","createdDate","exposureDate","useYn","contents"
             )
         }
-
         listAggOps.add(project)
 
         val now = CommonService.getNowEpochTime()
 
-        //where
+        /**
+         * Criteria 설정
+         */
         val criteria: Criteria = setMatchCriteria(
             postId, category, nickName, title, contents, q, now
         )
@@ -169,7 +191,10 @@ class BoardService:BoardServiceIn {
 
         listAggOps.add(match)
 
-        //orderBy
+        /**
+         * 정렬 조건
+         * default : createdDate DESC
+         */
         var orderArr = arrayOf("createdDate:-1")
         if(orderBy != ""){
             orderArr = orderBy.split(",").toTypedArray()
@@ -186,7 +211,10 @@ class BoardService:BoardServiceIn {
         }
         listAggOps.add(Aggregation.sort(Sort.by(orders)))
 
-        // paging
+        /**
+         * paging 처리
+         * default : page 0, size 10
+         */
         val limitValue = if (size > 0L) {
             size
         } else {
@@ -203,8 +231,6 @@ class BoardService:BoardServiceIn {
         listAggOps.add(limit)
 
         val listAgg = Aggregation.newAggregation(listAggOps)
-        val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "getBoardList")
-        logger.debug(logMsg)
 
 //        val countAgg : AggregationOperation = Aggregation.group("postId").count().`as`("TotalCount")
 //        listAggOps.add(countAgg)
@@ -212,11 +238,18 @@ class BoardService:BoardServiceIn {
 //
 //        }
 
+        stopWatch.stop()
+        stopWatch.start("Find Board List")
+
         return boardRepository.findBoardList(listAgg).collectList().flatMap { resultBoardList ->
             val boardList = ArrayList<BoardListResponse>()
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
             resultMap["size"] = limitValue
+
+            stopWatch.stop()
+            stopWatch.start("Convert Board To DTO")
+
             resultBoardList.forEach{ board ->
                 val createdDate = CommonService.epochToString(board.createdDate!!)
                 boardList.add(
@@ -232,6 +265,11 @@ class BoardService:BoardServiceIn {
             }
             resultMap["data"] = boardList
             resultMap["total"] = boardList.size
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
+
             Mono.just(resultMap)
         }
 
@@ -239,49 +277,53 @@ class BoardService:BoardServiceIn {
 
     /**
      * 게시글 입력
-     * @param board 게시글 입력 필드
-     * @suppress 1. 필수 파라미터 유효성 검증
-     * 2. board seq 생성 및 boardId 부여
-     * 3. 노출시각 예약이 존재할 경우 반영 없으면 현재시각으로 설정
-     * 4. board collection 게시글 document 삽입
+     * @param param 게시글 입력 필드
+     * @suppress 1.board seq 생성 및 boardId 부여
+     * 2. 노출시각 예약이 존재할 경우 반영 없으면 현재시각으로 설정
+     * 3. board collection 게시글 document 삽입
      *
-     * @exception CustomException.invalidParameter title,nickName,contents 누락시
-     * @exception CustomException.exceedMaxValue 필드의 maxValue 초과시
+     * @exception CustomException.validation 필드의 maxValue 초과시
      */
-    override fun insertBoard(board: Board): Mono<InsertBoardResponse> {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+    override fun insertBoard(param: InsertBoardRequest): Mono<InsertBoardResponse> {
+        logger.info("insertBoard Param : $param")
+
+        val stopWatch = StopWatch("insertBoard")
+        stopWatch.start("Get Board Sequence And Update")
 
         return seqRepository.getNextSeqIdUpdateInc("board").flatMap { seq ->
-            if(board.title.isNullOrEmpty()){                                                    //다국어 제목 누락
-                return@flatMap Mono.error(CustomException.invalidParameter("title"))
-            }else{                                                                              //제목 50자 초과
-                board.title!!.stream().forEach { multiLang ->
-                    if(multiLang.value.length>50){
-                        throw CustomException
-                            .exceedMaxValue("title",multiLang.value.substring(0,15)+"...",50)
-                    }
+            stopWatch.stop()
+            stopWatch.start("Make Board Entity")
+            /**
+             * 다국어 제목 글자수 검사
+             */
+            param.title!!.forEach { multiLang ->
+                if(multiLang.value.length>50){
+                    return@flatMap Mono.error(CustomException.validation(message = "길이가 5에서 50 사이여야 합니다",field = "title"))
                 }
             }
-            if(board.nickName.isNullOrEmpty()){                                                 //닉네임 누락
-                return@flatMap Mono.error(CustomException.invalidParameter("nickName"))
-            }else if(board.nickName!!.length > 20){                                             //닉네임 길이 초과
-                return@flatMap Mono.error(CustomException.exceedMaxValue("nickName",board.nickName!!,20))
-            }else if(board.contents.isNullOrEmpty()){                                           //내용 누락
-                return@flatMap Mono.error(CustomException.invalidParameter("contents"))
-            }else if(board.contents!!.length>255){                                              //내용 길이 초과
-                return@flatMap Mono.error(CustomException.exceedMaxValue("contents",board.contents!!.substring(0,15)+"...",255))
+            val now = CommonService.getNowEpochTime()
+            val expDate = if(param.exposureDate !=null && param.exposureDate!! >= now){
+                param.exposureDate
+            }else{
+                now
             }
-            if(board.category.isNullOrEmpty()){
-                board.category = "all"
-            }
-            board.useYn = "11"
-            board.createdDate = LocalDateTime.now(ZoneOffset.UTC).atZone(ZoneOffset.UTC).toEpochSecond()
-            board.exposureDate = board.exposureDate?:board.createdDate
 
-            board.postId = "post_${seq.seq}"
+            var board = Board(
+                postId = "post_${seq.seq}",
+                nickName = param.nickName,
+                contents = param.contents,
+                title = param.title,
+                category = param.category?:"all",
+                useYn = "11",
+                createdDate = now,
+                exposureDate = expDate
+            )
+            stopWatch.stop()
+            stopWatch.start("Insert Board Collection")
             boardRepository.insertBoard(board)
-        }.flatMap {
+        }.flatMap { board ->
+            stopWatch.stop()
+            stopWatch.start("Convert ResultBoard To DTO")
             val createdDate = CommonService.epochToString(board.createdDate!!)
             var resBoard = InsertBoardResponse(
                 postId = board.postId,
@@ -291,8 +333,9 @@ class BoardService:BoardServiceIn {
                 contents = board.contents,
                 createdDate = createdDate
             )
-            var logMsg = LogMessageMaker.getFunctionLog(stopWatch,"BoardService","insertBoard")
-            logger.debug(logMsg)
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("insertBoard time : ${stopWatch.totalTimeMillis}ms.")
             Mono.just(resBoard)
         }
 
@@ -309,8 +352,9 @@ class BoardService:BoardServiceIn {
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      */
     override fun deleteBoard(postId:String):Mono<DeleteResult>{
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        logger.info("deleteBoard param : $postId")
+        val stopWatch = StopWatch("deleteBoard")
+        stopWatch.start("Validation PostId")
 
         val query = Query(where("postId").`is`(postId))
         val deleteBoardHistory = DeleteBoardHistory()
@@ -318,12 +362,24 @@ class BoardService:BoardServiceIn {
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
+
+            stopWatch.stop()
+            stopWatch.start("Get History Sequence And Update")
+
             seqRepository.getNextSeqIdUpdateInc("history")
         }.flatMap { seq ->
             deleteBoardHistory.historyId = "history_${seq.seq}"
+
+            stopWatch.stop()
+            stopWatch.start("Find Comment List And Add Array")
+
             commentRepository.findAllComment(query).collectList()
         }.flatMap { commentList ->
             deleteBoardHistory.comment = commentList.toCollection(ArrayList())
+
+            stopWatch.stop()
+            stopWatch.start("Find Board And Change Status")
+
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
             board.useYn = "00"
@@ -331,20 +387,29 @@ class BoardService:BoardServiceIn {
             deleteBoardHistory.board = board
             deleteBoardHistory.postId = board.postId
             deleteBoardHistory.deletedDate = LocalDateTime.now(ZoneOffset.UTC).atZone(ZoneOffset.UTC).toEpochSecond()
+
+            stopWatch.stop()
+            stopWatch.start("Insert BoardHistory And Delete Board&Comment")
+
             historyRepository.insertBoardHistory(deleteBoardHistory)
         }.flatMap{
             commentRepository.deleteComment(query)
         }.flatMap {
-            val logMsg = LogMessageMaker.getFunctionLog(stopWatch, "BoardService", "deleteBoard")
-            logger.debug(logMsg)
-            boardRepository.deleteBoard(query)
+
+            stopWatch.stop()
+            val deleteBoard = boardRepository.deleteBoard(query)
+
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("deleteBoard time : ${stopWatch.totalTimeMillis}ms.")
+
+            deleteBoard
         }
     }
 
     /**
      * 게시글 수정
      * @param postId 대상 게시글의 아이디
-     * @param modBoardDTO 수정필드 DTO
+     * @param param 수정필드 DTO
      *
      * @suppress 1. 게시글이 존재하는지 판단
      * 2. history 의 seq 생성 및 historyId 부여
@@ -355,9 +420,10 @@ class BoardService:BoardServiceIn {
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      * @exception CustomException.exceedMaxValue 필드의 maxValue 초과시
      */
-    override fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>{
-        var stopWatch = StopWatch()
-        stopWatch.start()
+    override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
+        logger.info("modifyBoard param : postId= $postId, $param")
+        var stopWatch = StopWatch("modifyBoard")
+        stopWatch.start("Validation Param")
 
         val query = Query(where("postId").`is`(postId))
         var modifyBoardHistory = ModifyBoardHistory()
@@ -365,28 +431,33 @@ class BoardService:BoardServiceIn {
         return boardRepository.findExistBoard(query).flatMap {
             if(!it){
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
-            }else if(modBoardDTO.modifier.isNullOrEmpty()){
-                return@flatMap Mono.error(CustomException.invalidParameter("modifier"))
-            }else if(modBoardDTO.modifier!!.length > 20){
-                return@flatMap Mono.error(CustomException.exceedMaxValue("modifier",modBoardDTO.modifier!!.substring(0,15)+"...",20))
-            }else if(!modBoardDTO.contents.isNullOrEmpty()){
-                if(modBoardDTO.contents!!.length > 255)
-                    return@flatMap Mono.error(CustomException.exceedMaxValue("contents",modBoardDTO.contents!!.substring(0,15)+"...",255))
-            }else if(!modBoardDTO.title.isNullOrEmpty()){
-                modBoardDTO.title!!.forEach { multiLang ->
+            }else if(!param.contents.isNullOrEmpty() && param.contents!!.length > 255){
+                return@flatMap Mono.error(CustomException.validation(message = "길이가 0에서 255 사이여야 합니다",field = "contents"))
+            }else if(!param.title.isNullOrEmpty()){
+                param.title!!.forEach { multiLang ->
                     if(multiLang.value.length>50) {
-                        return@flatMap Mono.error(CustomException
-                            .exceedMaxValue("title", multiLang.value.substring(0, 15) + "...", 50))
+                        return@flatMap Mono.error(CustomException.validation(message = "길이가 0에서 50 사이여야 합니다",field = "title"))
                     }
                 }
             }
+
+            stopWatch.stop()
+            stopWatch.start("Get History Sequence And Update")
+
             seqRepository.getNextSeqIdUpdateInc("history")
         }.flatMap { seq ->
             modifyBoardHistory.historyId = "history_${seq.seq}"
+
+            stopWatch.stop()
+            stopWatch.start("Board Version Count And Update")
+
             getCountHistoryBoard(postId,"PATCH")
         }.flatMap { verCnt ->
-            var nowVer = verCnt+1
-            modifyBoardHistory.version = "V${nowVer}.0"
+            modifyBoardHistory.version = "V${verCnt+1}.0"
+
+            stopWatch.stop()
+            stopWatch.start("Get Single Board For Update")
+
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
             val createdDate = CommonService.epochToString(board.createdDate!!)
@@ -395,6 +466,10 @@ class BoardService:BoardServiceIn {
             }else{
                 ""
             }
+
+            stopWatch.stop()
+            stopWatch.start("Convert Board To DTO And ModifyBoardHistory")
+
             var boardRes = BoardResponse(
                 postId = board.postId,
                 nickName = board.nickName,
@@ -408,25 +483,35 @@ class BoardService:BoardServiceIn {
             modifyBoardHistory.postId = board.postId
             modifyBoardHistory.type = "PATCH"
             modifyBoardHistory.updatedDate = LocalDateTime.now(ZoneOffset.UTC).atZone(ZoneOffset.UTC).toEpochSecond()
-            modifyBoardHistory.modifier = modBoardDTO.modifier
+            modifyBoardHistory.modifier = param.modifier
+
+            stopWatch.stop()
+            stopWatch.start("Insert History Collection")
+
             historyRepository.insertBoardHistory(modifyBoardHistory)
         }.flatMap {
+
+            stopWatch.stop()
+            stopWatch.start("Update Board Collection")
+
             var update = Update()
-            modBoardDTO.title?.let {
-                update.set("title",modBoardDTO.title)
+            param.title?.let {
+                update.set("title",param.title)
             }
-            modBoardDTO.contents?.let {
-                update.set("contents",modBoardDTO.contents)
+            param.contents?.let {
+                update.set("contents",param.contents)
             }
-            update.set("modifier",modBoardDTO.modifier)
+            update.set("modifier",param.modifier)
             update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
-            val logMsg= LogMessageMaker.getFunctionLog(stopWatch,"BoardService","modifyBoard")
-            logger.debug(logMsg)
-            boardRepository.modifyBoard(query,update)
+            val modifyBoard = boardRepository.modifyBoard(query, update)
+
+            stopWatch.stop()
+            logger.info("${stopWatch.prettyPrint()}")
+            logger.info("modifyBoard time : ${stopWatch.totalTimeMillis}ms.")
+
+            modifyBoard
         }
     }
-
-
 
     /**
      * history type 별 count 조회

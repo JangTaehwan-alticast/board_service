@@ -27,7 +27,7 @@ class BoardRouter(val boardHandler: BoardHandler,val commentHandler: CommentHand
                 DELETE("/board/{postId}",boardHandler::deleteBoard)                         //게시글 삭제
 
                 GET("/board/{postId}/comment",commentHandler::findCmntList)                 //댓글 리스트 조회
-                POST("/board/{postId}/comment",commentHandler::insertCmmt)                  //댓글 입력
+                POST("/board/{postId}/comment",commentHandler::insertCmnt)                  //댓글 입력
                 PATCH("/board/{commentId}/comment",commentHandler::modifyCmnt)              //댓글 수정
                 DELETE("/board/{commentId}/comment",commentHandler::deleteCmnt)             //댓글 삭제
 

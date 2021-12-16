@@ -1,7 +1,9 @@
 package com.msp.board_service.domain
 
+import com.msp.board_service.util.CommonService
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
+import javax.validation.constraints.NotBlank
 
 @Document("board")
 data class Board(
