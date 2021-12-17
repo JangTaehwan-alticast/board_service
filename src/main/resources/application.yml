@@ -7,12 +7,11 @@ default:
 spring:
   data:
     mongodb:
-      uri: mongodb://127.0.0.1:27017/
-#      uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
-      database: newbie
+#      uri: mongodb://127.0.0.1:27017/
+      uri: mongodb+srv://mango:banana4apple@dev.2iplu.mongodb.net/mongodemo?retryWrites=true&w=majority
+#      database: newbie
   application:
     name: board-service
-
 
 info:
   app:
