@@ -11,6 +11,6 @@ class Response(
     companion object{
         fun ok(result:Any) = Response(200, CodeConfig.MESSAGE_OK,result)
         fun noValuePresent() = Response(1000001,CodeConfig.MESSAGE_NO_VALUE, null)
-        fun unExpectedException(message:String) = Response(500,message,null)
+        fun unExpectedException(message:String) = Response(CodeConfig.UN_EXPECTED_EXCEPTION,message,null)
     }
 }

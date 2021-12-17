@@ -1,5 +1,6 @@
 package com.msp.board_service.handler
 
+import com.msp.board_service.config.CodeConfig
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
 import com.msp.board_service.service.HistoryService
@@ -61,12 +62,12 @@ class HistoryHandler(val historyService: HistoryService) {
                         function = "getModHistoryBoardList",
                         result = "FAILURE",
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -115,12 +116,12 @@ class HistoryHandler(val historyService: HistoryService) {
                         function = "getModHistoryBoard",
                         result = "FAILURE",
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -169,12 +170,12 @@ class HistoryHandler(val historyService: HistoryService) {
                         function = "restoreDeletedBoard",
                         result = "FAILURE",
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }

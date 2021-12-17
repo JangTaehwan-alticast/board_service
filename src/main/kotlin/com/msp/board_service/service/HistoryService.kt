@@ -51,7 +51,7 @@ class HistoryService: HistoryServiceIn {
         logger.info("getModHistoryBoardList param : postId= $postId")
 
         val stopWatch = StopWatch("getModHistoryBoardList")
-        stopWatch.start("Count Board History")
+        stopWatch.start("[getModHistoryBoardList]Count Board History")
 
         val query = Query(where("postId").`is`(postId).and("type").`is`("PATCH"))
         val historyList = ArrayList<ModHistoryListResponse>()
@@ -61,7 +61,7 @@ class HistoryService: HistoryServiceIn {
 
             stopWatch.stop()
             if(total > 0L) {
-                stopWatch.start("Get Mod History List")
+                stopWatch.start("[getModHistoryBoardList]Get Mod History List")
                 historyRepository.findBoardHistoryList(query).collectList().flatMap { modHistoryList ->
                     modHistoryList.forEach { modBoardHistory ->
                         var updatedDate =
@@ -79,7 +79,7 @@ class HistoryService: HistoryServiceIn {
                     resultMap["data"] = historyList
 
                     stopWatch.stop()
-                    logger.info("${stopWatch.prettyPrint()}")
+                    logger.debug("[HistoryService]${stopWatch.prettyPrint()}")
                     logger.info("getModHistoryBoardList time : ${stopWatch.totalTimeMillis}ms.")
 
                     Mono.just(resultMap)
@@ -87,7 +87,7 @@ class HistoryService: HistoryServiceIn {
             }else{
                 resultMap["data"] = historyList
 
-                logger.info("${stopWatch.prettyPrint()}")
+                logger.debug("[HistoryService]${stopWatch.prettyPrint()}")
                 logger.info("getModHistoryBoardList time : ${stopWatch.totalTimeMillis}ms.")
 
                 Mono.just(resultMap)
@@ -109,7 +109,7 @@ class HistoryService: HistoryServiceIn {
         logger.info("getModHistoryBoard param : historyId= $historyId")
 
         val stopWatch = StopWatch("getModHistoryBoard")
-        stopWatch.start("Validation historyId")
+        stopWatch.start("[getModHistoryBoard]Validation historyId")
 
         val query = Query(where("historyId").`is`(historyId).and("type").`is`("PATCH"))
         return historyRepository.findExistHistoryBoard(query).flatMap {
@@ -117,7 +117,7 @@ class HistoryService: HistoryServiceIn {
                 return@flatMap Mono.error(CustomException.invalidHistoryId(historyId))
 
             stopWatch.stop()
-            stopWatch.start("Find Modify Board History And Convert To DTO")
+            stopWatch.start("[getModHistoryBoard]Find Modify Board History And Convert To DTO")
 
             historyRepository.findModBoardHistory(query)
         }.flatMap { modBoardHistory ->
@@ -133,7 +133,7 @@ class HistoryService: HistoryServiceIn {
             )
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[HistoryService]${stopWatch.prettyPrint()}")
             logger.info("getModHistoryBoard param : ${stopWatch.totalTimeMillis}ms.")
 
             Mono.just(modHistoryBoardResponse)
@@ -155,7 +155,7 @@ class HistoryService: HistoryServiceIn {
         logger.info("restoreDeletedBoard param : postId = $postId")
 
         val stopWatch = StopWatch("restoreDeletedBoard")
-        stopWatch.start("Validation PostId")
+        stopWatch.start("[restoreDeletedBoard]Validation PostId")
 
         val query = Query(where("postId").`is`(postId).and("type").`is`("DELETE"))
         var commentList = ArrayList<Comment>()
@@ -164,7 +164,7 @@ class HistoryService: HistoryServiceIn {
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
-            stopWatch.start("Find Deleted Board From History Collection")
+            stopWatch.start("[restoreDeletedBoard]Find Deleted Board From History Collection")
 
             historyRepository.findDeleteBoardHistory(query)
         }.flatMap { deleteBoardHistory ->
@@ -176,7 +176,7 @@ class HistoryService: HistoryServiceIn {
             deleteBoardHistory.board!!.useYn = "11"
 
             stopWatch.stop()
-            stopWatch.start("Restore Board&Comment And Delete History")
+            stopWatch.start("[restoreDeletedBoard]Restore Board&Comment And Delete History")
 
             boardRepository.insertBoard(deleteBoardHistory.board!!)
         }.flatMap {
@@ -185,8 +185,8 @@ class HistoryService: HistoryServiceIn {
             val deleteBoardHistory = historyRepository.deleteBoardHistory(query)
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
-            logger.info("${stopWatch.totalTimeMillis}ms.")
+            logger.debug("[HistoryService]${stopWatch.prettyPrint()}")
+            logger.info("restoreDeletedBoard time : ${stopWatch.totalTimeMillis}ms.")
 
             deleteBoardHistory
         }
