@@ -82,12 +82,12 @@ class CommentHandler(val cmntService: CommentService) {
                         function = "getCmntList",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -159,12 +159,12 @@ class CommentHandler(val cmntService: CommentService) {
                         function = "insertCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -212,12 +212,12 @@ class CommentHandler(val cmntService: CommentService) {
                         function = "deleteCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -273,12 +273,12 @@ class CommentHandler(val cmntService: CommentService) {
                         function = "modifyCmnt",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }

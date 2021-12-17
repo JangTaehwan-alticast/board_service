@@ -2,6 +2,8 @@ package com.msp.board_service.service
 
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
+import com.msp.board_service.common.customValidation.TitleValueValidator
+import com.msp.board_service.config.LangCodeConfig
 import com.msp.board_service.domain.Board
 import com.msp.board_service.domain.DeleteBoardHistory
 import com.msp.board_service.domain.ModifyBoardHistory
@@ -45,7 +47,6 @@ interface BoardServiceIn {
     fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
 }
 
-
 @Service
 class BoardService:BoardServiceIn {
 
@@ -81,19 +82,19 @@ class BoardService:BoardServiceIn {
 
         val stopWatch = StopWatch("getOneBoard")
 
-        stopWatch.start("Validation PostId")
+        stopWatch.start("[getOneBoard]Validation PostId")
         val query = Query(where("postId").`is`(postId))
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
-            stopWatch.start("Find Board From Collection")
+            stopWatch.start("[getOneBoard]Find Board From Collection")
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
 
             stopWatch.stop()
-            stopWatch.start("Convert Board To DTO")
+            stopWatch.start("[getOneBoard]Convert Board To DTO")
 
             val createdDate = CommonService.epochToString(board.createdDate!!)
             val lastUpdatedDate = if(board.lastUpdatedDate == null || board.lastUpdatedDate!! <= 0){
@@ -113,7 +114,7 @@ class BoardService:BoardServiceIn {
             )
             stopWatch.stop()
 
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("getOneBoard time : ${stopWatch.totalTimeMillis}ms.")
             Mono.just(boardResponse)
         }
@@ -153,7 +154,7 @@ class BoardService:BoardServiceIn {
     ): Mono<Any> {
         logger.info("getBoardList Param : postId= $postId, category= $category, nickName= $nickName, title= $title, contents= $contents, q= $q, page= $page, size= $size, orderBy= $orderBy, lang= $lang")
         val stopWatch = StopWatch("getBoardList")
-        stopWatch.start("Make Aggregation")
+        stopWatch.start("[getBoardList]Make Aggregation")
 
         val listAggOps = ArrayList<AggregationOperation>()
 
@@ -167,7 +168,7 @@ class BoardService:BoardServiceIn {
             ).and(
                 ArrayOperators.Filter.filter("title").`as`("title").by(
                     BooleanOperators.Or.or(
-                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(lang),
+                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(lang.lowercase()),
 //                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(DefaultCode.FALLBACK_LANG)
                     )
                 )
@@ -239,7 +240,7 @@ class BoardService:BoardServiceIn {
 //        }
 
         stopWatch.stop()
-        stopWatch.start("Find Board List")
+        stopWatch.start("[getBoardList]Find Board List")
 
         return boardRepository.findBoardList(listAgg).collectList().flatMap { resultBoardList ->
             val boardList = ArrayList<BoardListResponse>()
@@ -248,7 +249,7 @@ class BoardService:BoardServiceIn {
             resultMap["size"] = limitValue
 
             stopWatch.stop()
-            stopWatch.start("Convert Board To DTO")
+            stopWatch.start("[getBoardList]Convert Board To DTO")
 
             resultBoardList.forEach{ board ->
                 val createdDate = CommonService.epochToString(board.createdDate!!)
@@ -267,7 +268,7 @@ class BoardService:BoardServiceIn {
             resultMap["total"] = boardList.size
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
 
             Mono.just(resultMap)
@@ -288,19 +289,18 @@ class BoardService:BoardServiceIn {
         logger.info("insertBoard Param : $param")
 
         val stopWatch = StopWatch("insertBoard")
-        stopWatch.start("Get Board Sequence And Update")
+        stopWatch.start("[insertBoard]Get Board Sequence And Update")
 
         return seqRepository.getNextSeqIdUpdateInc("board").flatMap { seq ->
             stopWatch.stop()
-            stopWatch.start("Make Board Entity")
+            stopWatch.start("[insertBoard]Make Board Entity")
             /**
-             * 다국어 제목 글자수 검사
+             * 다국어 제목 검증
              */
             param.title!!.forEach { multiLang ->
-                if(multiLang.value.length>50){
-                    return@flatMap Mono.error(CustomException.validation(message = "길이가 5에서 50 사이여야 합니다",field = "title"))
-                }
+                multiLang.lang = multiLang.lang.lowercase()
             }
+
             val now = CommonService.getNowEpochTime()
             val expDate = if(param.exposureDate !=null && param.exposureDate!! >= now){
                 param.exposureDate
@@ -319,11 +319,11 @@ class BoardService:BoardServiceIn {
                 exposureDate = expDate
             )
             stopWatch.stop()
-            stopWatch.start("Insert Board Collection")
+            stopWatch.start("[insertBoard]Insert Board Collection")
             boardRepository.insertBoard(board)
         }.flatMap { board ->
             stopWatch.stop()
-            stopWatch.start("Convert ResultBoard To DTO")
+            stopWatch.start("[insertBoard]Convert ResultBoard To DTO")
             val createdDate = CommonService.epochToString(board.createdDate!!)
             var resBoard = InsertBoardResponse(
                 postId = board.postId,
@@ -334,7 +334,7 @@ class BoardService:BoardServiceIn {
                 createdDate = createdDate
             )
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("insertBoard time : ${stopWatch.totalTimeMillis}ms.")
             Mono.just(resBoard)
         }
@@ -354,7 +354,7 @@ class BoardService:BoardServiceIn {
     override fun deleteBoard(postId:String):Mono<DeleteResult>{
         logger.info("deleteBoard param : $postId")
         val stopWatch = StopWatch("deleteBoard")
-        stopWatch.start("Validation PostId")
+        stopWatch.start("[deleteBoard]Validation PostId")
 
         val query = Query(where("postId").`is`(postId))
         val deleteBoardHistory = DeleteBoardHistory()
@@ -364,21 +364,21 @@ class BoardService:BoardServiceIn {
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
-            stopWatch.start("Get History Sequence And Update")
+            stopWatch.start("[deleteBoard]Get History Sequence And Update")
 
             seqRepository.getNextSeqIdUpdateInc("history")
         }.flatMap { seq ->
             deleteBoardHistory.historyId = "history_${seq.seq}"
 
             stopWatch.stop()
-            stopWatch.start("Find Comment List And Add Array")
+            stopWatch.start("[deleteBoard]Find Comment List And Add Array")
 
             commentRepository.findAllComment(query).collectList()
         }.flatMap { commentList ->
             deleteBoardHistory.comment = commentList.toCollection(ArrayList())
 
             stopWatch.stop()
-            stopWatch.start("Find Board And Change Status")
+            stopWatch.start("[deleteBoard]Find Board And Change Status")
 
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
@@ -389,7 +389,7 @@ class BoardService:BoardServiceIn {
             deleteBoardHistory.deletedDate = LocalDateTime.now(ZoneOffset.UTC).atZone(ZoneOffset.UTC).toEpochSecond()
 
             stopWatch.stop()
-            stopWatch.start("Insert BoardHistory And Delete Board&Comment")
+            stopWatch.start("[deleteBoard]Insert BoardHistory And Delete Board&Comment")
 
             historyRepository.insertBoardHistory(deleteBoardHistory)
         }.flatMap{
@@ -399,7 +399,7 @@ class BoardService:BoardServiceIn {
             stopWatch.stop()
             val deleteBoard = boardRepository.deleteBoard(query)
 
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("deleteBoard time : ${stopWatch.totalTimeMillis}ms.")
 
             deleteBoard
@@ -423,7 +423,7 @@ class BoardService:BoardServiceIn {
     override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
         logger.info("modifyBoard param : postId= $postId, $param")
         var stopWatch = StopWatch("modifyBoard")
-        stopWatch.start("Validation Param")
+        stopWatch.start("[modifyBoard]Validation Param")
 
         val query = Query(where("postId").`is`(postId))
         var modifyBoardHistory = ModifyBoardHistory()
@@ -434,29 +434,28 @@ class BoardService:BoardServiceIn {
             }else if(!param.contents.isNullOrEmpty() && param.contents!!.length > 255){
                 return@flatMap Mono.error(CustomException.validation(message = "길이가 0에서 255 사이여야 합니다",field = "contents"))
             }else if(!param.title.isNullOrEmpty()){
+                TitleValueValidator.titleValidation(param.title!!)
                 param.title!!.forEach { multiLang ->
-                    if(multiLang.value.length>50) {
-                        return@flatMap Mono.error(CustomException.validation(message = "길이가 0에서 50 사이여야 합니다",field = "title"))
-                    }
+                    multiLang.lang = multiLang.lang.lowercase()
                 }
             }
 
             stopWatch.stop()
-            stopWatch.start("Get History Sequence And Update")
+            stopWatch.start("[modifyBoard]Get History Sequence And Update")
 
             seqRepository.getNextSeqIdUpdateInc("history")
         }.flatMap { seq ->
             modifyBoardHistory.historyId = "history_${seq.seq}"
 
             stopWatch.stop()
-            stopWatch.start("Board Version Count And Update")
+            stopWatch.start("[modifyBoard]Board Version Count And Update")
 
             getCountHistoryBoard(postId,"PATCH")
         }.flatMap { verCnt ->
             modifyBoardHistory.version = "V${verCnt+1}.0"
 
             stopWatch.stop()
-            stopWatch.start("Get Single Board For Update")
+            stopWatch.start("[modifyBoard]Get Single Board For Update")
 
             boardRepository.findOneBoard(query)
         }.flatMap { board ->
@@ -468,7 +467,7 @@ class BoardService:BoardServiceIn {
             }
 
             stopWatch.stop()
-            stopWatch.start("Convert Board To DTO And ModifyBoardHistory")
+            stopWatch.start("[modifyBoard]Convert Board To DTO And ModifyBoardHistory")
 
             var boardRes = BoardResponse(
                 postId = board.postId,
@@ -486,13 +485,13 @@ class BoardService:BoardServiceIn {
             modifyBoardHistory.modifier = param.modifier
 
             stopWatch.stop()
-            stopWatch.start("Insert History Collection")
+            stopWatch.start("[modifyBoard]Insert History Collection")
 
             historyRepository.insertBoardHistory(modifyBoardHistory)
         }.flatMap {
 
             stopWatch.stop()
-            stopWatch.start("Update Board Collection")
+            stopWatch.start("[modifyBoard]Update Board Collection")
 
             var update = Update()
             param.title?.let {
@@ -506,7 +505,7 @@ class BoardService:BoardServiceIn {
             val modifyBoard = boardRepository.modifyBoard(query, update)
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("modifyBoard time : ${stopWatch.totalTimeMillis}ms.")
 
             modifyBoard

@@ -61,7 +61,7 @@ class CommentService : CommentServiceIn {
         logger.info("insertCmnt param : postId= $postId, $param ")
 
         val stopWatch = StopWatch("insertCmnt")
-        stopWatch.start("Validation PostId")
+        stopWatch.start("[insertCmnt]Validation PostId")
 
         var commentId = ""
         var query = Query.query(Criteria.where("postId").`is`(postId))
@@ -71,13 +71,13 @@ class CommentService : CommentServiceIn {
                 return@flatMap Mono.error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
-            stopWatch.start("Get Comment Sequence And Update")
+            stopWatch.start("[insertCmnt]Get Comment Sequence And Update")
 
             seqRepository.getNextSeqIdUpdateInc("comment")
         }.flatMap { seq ->
 
             stopWatch.stop()
-            stopWatch.start("Make Comment Entity And Insert Comment Collection")
+            stopWatch.start("[insertCmnt]Make Comment Entity And Insert Comment Collection")
 
             commentId = "comment_${seq.seq}"
             val createdDate = CommonService.getNowEpochTime()
@@ -93,7 +93,7 @@ class CommentService : CommentServiceIn {
         }.flatMap { Comment ->
 
             stopWatch.stop()
-            stopWatch.start("Convert Comment To DTO")
+            stopWatch.start("[insertCmnt]Convert Comment To DTO")
 
             val createdDateRes = CommonService.epochToString(Comment.createdDate!!)
             var resCmnt = InsertCommentResponse(
@@ -105,7 +105,7 @@ class CommentService : CommentServiceIn {
             )
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[CommentService]${stopWatch.prettyPrint()}")
             logger.info("insertCmnt time : ${stopWatch.totalTimeMillis}ms.")
 
             Mono.just(resCmnt)
@@ -127,7 +127,7 @@ class CommentService : CommentServiceIn {
         logger.info("findCmntList param : postId= $postId, size= $size, page= $page")
 
         val stopWatch = StopWatch("findCmntList")
-        stopWatch.start("Make Aggregation")
+        stopWatch.start("[findCmntList]Make Aggregation")
 
         val countAggOps = ArrayList<AggregationOperation>()
         val listAggOps = ArrayList<AggregationOperation>()
@@ -170,7 +170,7 @@ class CommentService : CommentServiceIn {
         val listAgg = Aggregation.newAggregation(listAggOps)
 
         stopWatch.stop()
-        stopWatch.start("Count Total Cmnt")
+        stopWatch.start("[findCmntList]Count Total Cmnt")
 
         return cmntRepository.findCommentCount(countAgg).flatMap { total ->
             val resultMap = HashMap<String, Any>()
@@ -180,12 +180,12 @@ class CommentService : CommentServiceIn {
             val commentList = ArrayList<CommentResponse>()
 
             stopWatch.stop()
-            stopWatch.start("Find Cmnt List")
+            stopWatch.start("[findCmntList]Find Cmnt List")
 
             cmntRepository.findCommentList(listAgg).collectList().flatMap { oriComment ->
 
                 stopWatch.stop()
-                stopWatch.start("Convert Cmnt To DTO And Add List")
+                stopWatch.start("[findCmntList]Convert Cmnt To DTO And Add List")
 
                 oriComment.forEach { comment ->
                     val createdDate  = CommonService.epochToString(comment.createdDate!!)
@@ -204,7 +204,7 @@ class CommentService : CommentServiceIn {
                 resultMap["data"] = commentList
 
                 stopWatch.stop()
-                logger.info("${stopWatch.prettyPrint()}")
+                logger.debug("[CommentService]${stopWatch.prettyPrint()}")
                 logger.info("findCmntList time : ${stopWatch.totalTimeMillis}ms.")
 
                 Mono.just(resultMap)
@@ -225,7 +225,7 @@ class CommentService : CommentServiceIn {
         logger.info("deleteCmnt param : commentId= $commentId")
 
         val stopWatch = StopWatch("deleteCmnt")
-        stopWatch.start("Validation commentId")
+        stopWatch.start("[deleteCmnt]Validation commentId")
 
         val query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
@@ -233,12 +233,12 @@ class CommentService : CommentServiceIn {
                 return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
 
             stopWatch.stop()
-            stopWatch.start("Delete Comment From Collection")
+            stopWatch.start("[deleteCmnt]Delete Comment From Collection")
 
             val deleteComment = cmntRepository.deleteComment(query)
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.debug("[CommentService]${stopWatch.prettyPrint()}")
             logger.info("deleteCmnt time : ${stopWatch.totalTimeMillis}")
 
             deleteComment
@@ -263,7 +263,7 @@ class CommentService : CommentServiceIn {
         logger.info("modifyCmnt param : commentId= $commentId, $param")
 
         val stopWatch = StopWatch("modifyCmnt")
-        stopWatch.start("Validation commentId")
+        stopWatch.start("[modifyCmnt]Validation commentId")
 
         var query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
@@ -271,7 +271,7 @@ class CommentService : CommentServiceIn {
                 return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
 
             stopWatch.stop()
-            stopWatch.start("Update Cmnt Collection")
+            stopWatch.start("[modifyCmnt]Update Cmnt Collection")
 
             var updatedDate = CommonService.getNowEpochTime()
             var update = Update()
@@ -281,8 +281,8 @@ class CommentService : CommentServiceIn {
             val modifyComment = cmntRepository.modifyComment(query, update)
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
-            logger.info("${stopWatch.totalTimeMillis}ms.")
+            logger.debug("[CommentService]${stopWatch.prettyPrint()}")
+            logger.info("modifyCmnt time : ${stopWatch.totalTimeMillis}ms.")
 
             modifyComment
         }

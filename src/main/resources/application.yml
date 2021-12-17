@@ -23,7 +23,7 @@ info:
 
 logging:
   file:
-    path: /Users/admin/Downloads/신입자료/연수/board_service/logs
+    path: ./logs
 
 
 

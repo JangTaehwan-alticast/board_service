@@ -2,6 +2,7 @@ package com.msp.board_service.handler
 
 import com.msp.board_service.config.CodeConfig
 import com.msp.board_service.domain.Board
+import com.msp.board_service.domain.MultiLang
 import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
 import com.msp.board_service.exception.CustomException
@@ -91,12 +92,12 @@ class BoardHandler(val boardService: BoardService) {
                         function = "getBoardList",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -144,12 +145,12 @@ class BoardHandler(val boardService: BoardService) {
                         function = "getOneBoard",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -231,12 +232,12 @@ class BoardHandler(val boardService: BoardService) {
                         function = "insertBoard",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -305,12 +306,12 @@ class BoardHandler(val boardService: BoardService) {
                         function = "updateBoard",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
@@ -369,12 +370,12 @@ class BoardHandler(val boardService: BoardService) {
                         function = "deleteBoard",
                         result = "FAILURE" ,
                         message = it.message!!,
-                        code = 500,
+                        code = CodeConfig.UN_EXPECTED_EXCEPTION,
                         path = req.pathVariables(),
                         param = req.queryParams()
                     )
                     logger.error(logMsg)
-                    ok().body(Mono.just(Response.unExpectedException(it.cause.toString())))
+                    ok().body(Mono.just(Response.unExpectedException(it.message!!)))
                 }
             }
         }
