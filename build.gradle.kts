@@ -1,6 +1,6 @@
 
 plugins {
-	id("org.springframework.boot") version "2.5.3"
+	id("org.springframework.boot") version "2.3.12.RELEASE"
 	id("io.spring.dependency-management") version "1.0.11.RELEASE"
 	kotlin("jvm") version "1.5.31"
 	kotlin("plugin.spring") version "1.5.31"
@@ -12,6 +12,7 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 
 val springBootVersion: String by extra
+val springCloudVersion: String by extra
 
 
 repositories {
@@ -27,7 +28,12 @@ dependencies {
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 	implementation("org.springframework.boot:spring-boot-starter-aop")
-	implementation( "org.apache.commons:commons-lang3:3.12.0")
+	implementation("org.apache.commons:commons-lang3:3.12.0")
+
+//	implementation("org.springframework.cloud:spring-cloud-config-client:$springCloudVersion")
+	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:2.2.5.RELEASE")
+	implementation("org.springframework.cloud:spring-cloud-starter-netflix-hystrix:2.2.7.RELEASE")
+
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test") {
 		exclude(module = "junit")
