@@ -19,13 +19,12 @@ class BoardRouter(val boardHandler: BoardHandler,val commentHandler: CommentHand
             GET("/") { permanentRedirect(URI("index.html")).build() }
         }
         accept(APPLICATION_JSON).nest{
-            "/board-service/v1".nest {
+            "/v1".nest {
                 GET("/board",boardHandler::getBoardList)                                    //게시글 리스트 조회(검색포함)
                 POST("/board",boardHandler::insertBoard)                                    //게시글 입력
                 GET("/board/{postId}",boardHandler::getOneBoard)                            //게시글 단건조회
                 PATCH("/board/{postId}",boardHandler::modifyBoard)                          //게시글 수정
                 DELETE("/board/{postId}",boardHandler::deleteBoard)                         //게시글 삭제
-
                 GET("/board/{postId}/comment",commentHandler::findCmntList)                 //댓글 리스트 조회
                 POST("/board/{postId}/comment",commentHandler::insertCmnt)                  //댓글 입력
                 PATCH("/board/{commentId}/comment",commentHandler::modifyCmnt)              //댓글 수정

@@ -4,6 +4,7 @@ server:
 default:
   language: en #다국어 반환 시 적용되는 기본언어
 
+
 spring:
   data:
     mongodb:
@@ -12,6 +13,25 @@ spring:
 #      database: newbie
   application:
     name: board-service
+  cloud:
+    config:
+      label: develop
+    loadbalancer:
+      ribbon:
+        enabled: false
+
+eureka:
+  instance:
+    prefer-ip-address: true # 서비스 이름 대신 서비스 IP 주소 등록 옵션
+    lease-renewal-interval-in-seconds: 1 # Discovery 에 1초마다 하트비트 전송
+    lease-expiration-duration-in-seconds: 2 # Discovery 는 서비스 등록 해제 전 마지막 하트비트로부터 2초 기다림
+  client:
+    enabled: true
+    register-with-eureka: true # 유레카에 서비스 등록
+    fetch-registry: true # 유레카 서비스 위치
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    registry-fetch-interval-seconds: 30
 
 info:
   app:

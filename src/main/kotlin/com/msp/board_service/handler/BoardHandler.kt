@@ -1,10 +1,9 @@
 package com.msp.board_service.handler
 
 import com.msp.board_service.config.CodeConfig
-import com.msp.board_service.domain.Board
-import com.msp.board_service.domain.MultiLang
 import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
+import com.msp.board_service.domain.response.BoardListResponse
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
 import com.msp.board_service.service.BoardService
@@ -20,7 +19,6 @@ import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
 import javax.validation.Validation
-import javax.xml.validation.Validator
 
 @Component
 class BoardHandler(val boardService: BoardService) {
@@ -52,7 +50,7 @@ class BoardHandler(val boardService: BoardService) {
                 serviceName = "BoardService",
                 function = "getBoardList",
                 result = "SUCCESS",
-                value = it,
+                value = " ",
                 path = req.pathVariables(),
                 param = req.queryParams()
             )

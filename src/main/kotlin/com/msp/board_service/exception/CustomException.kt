@@ -12,6 +12,10 @@ class CustomException : Exception {
         fun invalidPostId(postId: String) =CustomException("$postId : 유효하지 않은 postId 입니다.",3260002)                     //유효하지 않는 postId 입력시
         fun invalidCommentId(commentId: String) =CustomException("$commentId : 유효하지 않은 commentId 입니다.",3260003)         //유효하지 않는 commentId 입력시
         fun invalidHistoryId(historyId: String) =CustomException("$historyId : 유효하지 않은 historyId 입니다.",3260004)         //유효하지 않는 historyId 입력시
+        fun invalidSortField(field: String) =CustomException("$field : 유효하지 않은 정렬조건 입니다.",3260005)                    //유효하지 않는 sort field 입력시
+        fun invalidSizeRange() = CustomException("size : 1..100 범위가 아닙니다.",3260006)                                      //유효하지 않는 size 범위
+        fun invalidPageRange() = CustomException("page : -1 이상이어야 합니다.",3260007)                                         //유효하지 않는 page
+
     }
 
     constructor(message: String) : super(message)

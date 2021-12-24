@@ -19,6 +19,7 @@ import com.msp.board_service.repository.SequenceRepository
 import com.msp.board_service.util.CommonService
 import com.msp.board_service.util.MakeWhereCriteria
 import kotlinx.coroutines.*
+import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrDefault
 import kotlinx.coroutines.reactive.awaitFirstOrElse
 import org.apache.commons.lang3.StringUtils
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.aggregation.*
+import org.springframework.data.mongodb.core.query.Collation
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Criteria.where
 import org.springframework.data.mongodb.core.query.Query
@@ -33,8 +35,6 @@ import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
 import org.springframework.util.StopWatch
 import reactor.core.publisher.Mono
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 
 interface BoardServiceIn {
@@ -42,7 +42,7 @@ interface BoardServiceIn {
     fun getBoardList(
         postId: String, category: String, nickName: String, title: String,
         contents: String, q: String, page: Long, size: Long, orderBy: String, lang: String
-    ):Mono<Any>
+    ):Mono<HashMap<String,*>>
     fun insertBoard(param: InsertBoardRequest): Mono<InsertBoardResponse>
     fun deleteBoard(postId:String):Mono<DeleteResult>
     fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
@@ -154,7 +154,7 @@ class BoardService:BoardServiceIn {
         size: Long,
         orderBy: String,
         lang: String
-    ): Mono<Any> {
+    ): Mono<HashMap<String,*>> {
         logger.info(
             "getBoardList Param : postId= $postId, category= $category, nickName= $nickName, title= $title," +
                     " contents= $contents, q= $q, page= $page, size= $size, orderBy= $orderBy, lang= $lang")
@@ -162,6 +162,7 @@ class BoardService:BoardServiceIn {
         stopWatch.start("[getBoardList]Make Aggregation")
 
         val listAggOps = ArrayList<AggregationOperation>()
+        val countAggOps = ArrayList<AggregationOperation>()
 
         /**
          * Document 에서 필요한 field 정의
@@ -184,6 +185,7 @@ class BoardService:BoardServiceIn {
             )
         }
         listAggOps.add(project)
+        countAggOps.add(project)
 
 
         /**
@@ -195,18 +197,31 @@ class BoardService:BoardServiceIn {
             )
         val match: AggregationOperation = Aggregation.match(criteria)
         listAggOps.add(match)
+        countAggOps.add(match)
+        val countAgg : AggregationOperation = Aggregation.group("useYn").count().`as`("TotalCount")
+        countAggOps.add(countAgg)
+
 
         /**
          * 정렬 조건
          * default : createdDate DESC
          */
+        val orderProject = setOf(
+            "postId", "nickName", "title", "category", "createdDate", "exposureDate", "contents"
+        )
+
         var orderArr = arrayOf("createdDate:-1")
         if(orderBy != ""){
             orderArr = orderBy.split(",").toTypedArray()
         }
-        var orders = ArrayList<Sort.Order>()
+        val orders = ArrayList<Sort.Order>()
         for (order in orderArr) {
             val fieldName = order.split(":")[0]
+
+            if (!orderProject.contains(fieldName))
+                throw CustomException.invalidSortField(fieldName)
+
+
             val sortOrder = order.split(":")[1].toInt()
             if(sortOrder ==1 ){
                 orders.add(Sort.Order(Sort.Direction.ASC,fieldName))
@@ -219,9 +234,15 @@ class BoardService:BoardServiceIn {
 
         /**
          * paging 처리
-         * default : page 0, size 10
+         * default : page 0, size 10(limit 100)
          */
-        val limitValue = if (size > 0L) {
+        if (size < 0L || size > 100L){
+            throw CustomException.invalidSizeRange()
+        }else if (page < 0L){
+            throw CustomException.invalidPageRange()
+        }
+
+        val limitValue = if (size in 1..100) {
             size
         } else {
             10L
@@ -238,47 +259,53 @@ class BoardService:BoardServiceIn {
 
         val listAgg = Aggregation.newAggregation(listAggOps)
 
-//        val countAgg : AggregationOperation = Aggregation.group("postId").count().`as`("TotalCount")
-//        listAggOps.add(countAgg)
-//        boardRepository.findBoardMapList(listAggOps).flatMap {
-//
-//        }
-
         stopWatch.stop()
-        stopWatch.start("[getBoardList]Find Board List")
+        stopWatch.start("[getBoardList]Count Board")
         logger.info("query = $listAgg")
+        return boardRepository.findBoardMapList(Aggregation.newAggregation(countAggOps)).collectList().flatMap { countMap ->
+            stopWatch.stop()
+            stopWatch.start("[getBoardList]Find Board List")
 
-        return boardRepository.findBoardList(listAgg).collectList().flatMap {  resultBoardList ->
-            val boardList = ArrayList<BoardListResponse>()
+            val cnt = countMap.first().toMutableMap()["TotalCount"].toString().toLong()
+
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
             resultMap["size"] = limitValue
+            resultMap["total"] = cnt
+            if (cnt > 0L){
+                return@flatMap boardRepository.findBoardList(listAgg).collectList().flatMap {  resultBoardList ->
+                    val boardList = ArrayList<BoardListResponse>()
 
-            stopWatch.stop()
-            stopWatch.start("[getBoardList]Convert Board To DTO")
+                    stopWatch.stop()
+                    stopWatch.start("[getBoardList]Convert Board To DTO")
 
-            resultBoardList.forEach{ board ->
-                val createdDate = CommonService.epochToString(board.createdDate!!)
-                boardList.add(
-                    BoardListResponse(
-                        postId = board.postId,
-                        nickName = board.nickName,
-                        title = board.title,
-                        contents = board.contents,
-                        category = board.category,
-                        createdDate = createdDate
-                    )
-                )
+                    resultBoardList.forEach{ board ->
+                        val createdDate = CommonService.epochToString(board.createdDate!!)
+                        boardList.add(
+                            BoardListResponse(
+                                postId = board.postId,
+                                nickName = board.nickName,
+                                title = board.title,
+                                contents = board.contents,
+                                category = board.category,
+                                createdDate = createdDate
+                            )
+                        )
+                    }
+                    resultMap["data"] = boardList
+
+                    stopWatch.stop()
+                    logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+                    logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
+                    Mono.just(resultMap)
+                }
             }
-            resultMap["data"] = boardList
-            resultMap["total"] = boardList.size
-
             stopWatch.stop()
             logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
-
             Mono.just(resultMap)
         }
+
     }
 
 
@@ -317,7 +344,7 @@ class BoardService:BoardServiceIn {
             } else {
                 now
             }
-            var board = Board(
+            val board = Board(
                 nickName = param.nickName,
                 contents = param.contents,
                 title = param.title,
@@ -327,13 +354,12 @@ class BoardService:BoardServiceIn {
                 exposureDate = expDate
             )
 
-            async {
-                boardRepository.insertBoard(board)
-            }
+            board.postId = "post_${seq.await().seq}"
+            boardRepository.insertBoard(board).awaitFirst()
+
 
             val createdDate = CommonService.epochToString(board.createdDate!!)
-            board.postId = "post_${seq.await().seq}"
-            var resBoard = InsertBoardResponse(
+            val resBoard = InsertBoardResponse(
                 postId = board.postId,
                 nickName = board.nickName,
                 category = board.category,
@@ -398,13 +424,9 @@ class BoardService:BoardServiceIn {
             deleteBoardHistory.historyId = "history_${seq.await().seq}"
             deleteBoardHistory.comment = commentList.await().toCollection(ArrayList())
 
-            async {
-                historyRepository.insertBoardHistory(deleteBoardHistory)
-            }
-            async {
+            withContext(Dispatchers.IO) {
                 commentRepository.deleteComment(query)
-            }
-            withContext(Dispatchers.Default) {
+                historyRepository.insertBoardHistory(deleteBoardHistory)
                 boardRepository.deleteBoard(query)
             }.flatMap {
                 Mono.just(it)
@@ -424,7 +446,6 @@ class BoardService:BoardServiceIn {
      * 5. 기존 게시물 수정
      * @exception CustomException.invalidParameter modifier 누락시
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
-     * @exception CustomException.exceedMaxValue 필드의 maxValue 초과시
      */
 //    override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
 //        logger.info("modifyBoard param : postId= $postId, $param")
@@ -520,11 +541,11 @@ class BoardService:BoardServiceIn {
     override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
         return runBlocking {
             logger.info("modifyBoard param : postId= $postId, $param")
-            var stopWatch = StopWatch("modifyBoard")
+            val stopWatch = StopWatch("modifyBoard")
             stopWatch.start("[modifyBoard]Start Modify Board")
 
             val query = Query(where("postId").`is`(postId))
-            var modifyBoardHistory = ModifyBoardHistory()
+            val modifyBoardHistory = ModifyBoardHistory()
 
             if(!param.contents.isNullOrEmpty() && param.contents!!.length > 255){
                 throw CustomException.validation(message = "길이가 0에서 255 사이여야 합니다",field = "contents")
@@ -554,12 +575,12 @@ class BoardService:BoardServiceIn {
             val board = boardAsync.await()
 
             val createdDate = CommonService.epochToString(board.createdDate!!)
-            var lastUpdatedDate = if(board.lastUpdatedDate != null) {
+            val lastUpdatedDate = if(board.lastUpdatedDate != null) {
                 CommonService.epochToString(board.lastUpdatedDate!!)
             }else{
                 ""
             }
-            var boardRes = BoardResponse(
+            val boardRes = BoardResponse(
                 postId = board.postId,
                 nickName = board.nickName,
                 category = board.category,
@@ -582,7 +603,7 @@ class BoardService:BoardServiceIn {
                 }
             }
 
-            var update = Update()
+            val update = Update()
             param.title?.let {
                 update.set("title",param.title)
             }
@@ -624,42 +645,42 @@ class BoardService:BoardServiceIn {
         postId: String, category: String, nickName: String,
         title: String, contents: String, q: String, now: Long
     ): Criteria {
-        var criteria = Criteria()
-        var andCriteria = ArrayList<Criteria>()
+        val criteria = Criteria()
+        val andCriteria = ArrayList<Criteria>()
         andCriteria.add(MakeWhereCriteria.makeWhereCriteria("exposureDate","le",now.toString(),"long"))
         if(!postId.isNullOrEmpty()){
-            var paramValue = postId.split("?")
+            val paramValue = postId.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("postId",paramValue[0],paramValue[1]))
             }
         }
         if(!category.isNullOrEmpty()){
-            var paramValue = category.split("?")
+            val paramValue = category.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("category",paramValue[0],paramValue[1]))
             }
         }
         if(!nickName.isNullOrEmpty()){
-            var paramValue = nickName.split("?")
+            val paramValue = nickName.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("nickName",paramValue[0],paramValue[1]))
             }
         }
         if(!title.isNullOrEmpty()){
-            var paramValue = title.split("?")
+            val paramValue = title.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("title.value",paramValue[0],paramValue[1]))
             }
         }
         if(!contents.isNullOrEmpty()){
-            var paramValue = contents.split("?")
+            val paramValue = contents.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("contents",paramValue[0],paramValue[1]))
             }
         }
         if(!q.isNullOrEmpty()){
             val qList = StringUtils.deleteWhitespace(q).split(",")
-            var paramList = ArrayList<String>()
+            val paramList = ArrayList<String>()
             var idx = -1
             qList.forEach{
                 if(it.indexOf("%")>0){
@@ -671,14 +692,14 @@ class BoardService:BoardServiceIn {
             }
 
             paramList.forEach {
-                var param = it.split("%")
+                val param = it.split("%")
                 if(param.size == 2){
-                    var paramName = if(param[0] == "title"){
+                    val paramName = if(param[0] == "title"){
                         "title.value"
                     }else{
                         param[0]
                     }
-                    var paramValues = param[1].split("?")
+                    val paramValues = param[1].split("?")
                     if(paramValues.size == 2){
                         var valueType = "string"
                         if(StringUtils.equalsAnyIgnoreCase(paramName,
