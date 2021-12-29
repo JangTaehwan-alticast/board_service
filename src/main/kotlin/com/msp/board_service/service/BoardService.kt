@@ -18,16 +18,18 @@ import com.msp.board_service.repository.HistoryRepository
 import com.msp.board_service.repository.SequenceRepository
 import com.msp.board_service.util.CommonService
 import com.msp.board_service.util.MakeWhereCriteria
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrDefault
 import kotlinx.coroutines.reactive.awaitFirstOrElse
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.aggregation.*
-import org.springframework.data.mongodb.core.query.Collation
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Criteria.where
 import org.springframework.data.mongodb.core.query.Query
@@ -229,7 +231,6 @@ class BoardService:BoardServiceIn {
                 orders.add(Sort.Order(Sort.Direction.DESC,fieldName))
             }
         }
-
         listAggOps.add(Aggregation.sort(Sort.by(orders)))
 
         /**
@@ -266,14 +267,17 @@ class BoardService:BoardServiceIn {
             stopWatch.stop()
             stopWatch.start("[getBoardList]Find Board List")
 
-            val cnt = countMap.first().toMutableMap()["TotalCount"].toString().toLong()
-
+            val cnt = if (countMap.isNotEmpty()){
+                countMap.first().toMutableMap()["TotalCount"].toString().toLong()
+            }else{
+                0L
+            }
             val resultMap = HashMap<String, Any>()
             resultMap["page"] = page
             resultMap["size"] = limitValue
             resultMap["total"] = cnt
             if (cnt > 0L){
-                return@flatMap boardRepository.findBoardList(listAgg).collectList().flatMap {  resultBoardList ->
+                boardRepository.findBoardList(listAgg).collectList().flatMap {  resultBoardList ->
                     val boardList = ArrayList<BoardListResponse>()
 
                     stopWatch.stop()
@@ -299,11 +303,13 @@ class BoardService:BoardServiceIn {
                     logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
                     Mono.just(resultMap)
                 }
+            }else{
+                stopWatch.stop()
+                logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+                logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
+                resultMap["data"] = ArrayList<BoardListResponse>()
+                Mono.just(resultMap)
             }
-            stopWatch.stop()
-            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
-            logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
-            Mono.just(resultMap)
         }
 
     }

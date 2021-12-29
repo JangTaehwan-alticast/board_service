@@ -97,7 +97,7 @@ paths:
         - in: "query"
           type: string
           name: "orderBy"
-          description: "정렬 기준 (default createdDate:1 desc)"
+          description: "정렬 기준 (default createdDate:-1 desc)"
         - in: "query"
           type: string
           name: "lang"
