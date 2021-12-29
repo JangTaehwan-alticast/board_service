@@ -3,7 +3,6 @@ package com.msp.board_service.handler
 import com.msp.board_service.config.CodeConfig
 import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
-import com.msp.board_service.domain.response.BoardListResponse
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.response.Response
 import com.msp.board_service.service.BoardService
