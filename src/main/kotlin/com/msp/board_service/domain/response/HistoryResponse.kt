@@ -7,7 +7,7 @@ data class ModHistoryListResponse(
     var postId: String? = null,
     var updatedDate: String? = null,
     var version: String? = null,
-    var modifier: String? = null,
+    var modifier: String? = null
 )
 
 data class ModHistoryBoardResponse(

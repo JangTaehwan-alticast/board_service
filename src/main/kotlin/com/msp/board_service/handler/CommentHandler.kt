@@ -104,7 +104,7 @@ class CommentHandler(val cmntService: CommentService) {
         }.flatMap { insertCmntRequest ->
             val validator = Validation.buildDefaultValidatorFactory().validator.validate(insertCmntRequest)
             if(validator.isNotEmpty())
-                return@flatMap Mono.error(CustomException.validation(
+                return@flatMap error(CustomException.validation(
                     message = validator.first().message,
                     field = validator.first().propertyPath
                 ))
@@ -234,7 +234,7 @@ class CommentHandler(val cmntService: CommentService) {
         }.flatMap { modCmntRequest ->
             val validator = Validation.buildDefaultValidatorFactory().validator.validate(modCmntRequest)
             if(validator.isNotEmpty())
-                return@flatMap Mono.error(CustomException.validation(
+                return@flatMap error(CustomException.validation(
                     message = validator.first().message,
                     field = validator.first().propertyPath
                 ))

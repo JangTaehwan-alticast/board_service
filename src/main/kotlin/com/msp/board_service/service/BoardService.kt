@@ -40,12 +40,12 @@ import reactor.core.publisher.Mono
 
 
 interface BoardServiceIn {
-    fun getOneBoard(postId:String):Mono<Any>
+    fun getOneBoard(postId:String):Mono<BoardResponse>
     fun getBoardList(
         postId: String, category: String, nickName: String, title: String,
         contents: String, q: String, page: Long, size: Long, orderBy: String, lang: String
     ):Mono<HashMap<String,*>>
-    fun insertBoard(param: InsertBoardRequest): Mono<InsertBoardResponse>
+    fun insertBoard(param: InsertBoardRequest): Mono<BoardListResponse>
     fun deleteBoard(postId:String):Mono<DeleteResult>
     fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
 }
@@ -80,7 +80,7 @@ class BoardService:BoardServiceIn {
      *
      * @exception CustomException.invalidPostId 유효하지 않은 postId 인 경우
      */
-    override fun getOneBoard(postId: String): Mono<Any> {
+    override fun getOneBoard(postId: String): Mono<BoardResponse> {
         return runBlocking {
             logger.info("getOneBoard Param : $postId")
 
@@ -115,7 +115,7 @@ class BoardService:BoardServiceIn {
                 title = board.title,
                 contents = board.contents,
                 createdDate = createdDate,
-                lastUpdatedDate = lastUpdatedDate,
+                lastUpdatedDate = lastUpdatedDate
             )
             stopWatch.stop()
 
@@ -176,7 +176,7 @@ class BoardService:BoardServiceIn {
             ).and(
                 ArrayOperators.Filter.filter("title").`as`("title").by(
                     BooleanOperators.Or.or(
-                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(lang.lowercase()),
+                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(lang.toLowerCase())
 //                        ComparisonOperators.Eq.valueOf("title.lang").equalToValue(DefaultCode.FALLBACK_LANG)
                     )
                 )
@@ -324,7 +324,7 @@ class BoardService:BoardServiceIn {
      *
      * @exception CustomException.validation 필드의 maxValue 초과시
      */
-    override fun insertBoard(param: InsertBoardRequest): Mono<InsertBoardResponse> {
+    override fun insertBoard(param: InsertBoardRequest): Mono<BoardListResponse> {
         return runBlocking {
             logger.info("insertBoard Param : $param")
             val stopWatch = StopWatch("insertBoard")
@@ -334,7 +334,7 @@ class BoardService:BoardServiceIn {
              * title language lowercase 변환
              */
             param.title!!.forEach { multiLang ->
-                multiLang.lang = multiLang.lang.lowercase()
+                multiLang.lang = multiLang.lang.toLowerCase()
             }
 
             /**
@@ -365,7 +365,7 @@ class BoardService:BoardServiceIn {
 
 
             val createdDate = CommonService.epochToString(board.createdDate!!)
-            val resBoard = InsertBoardResponse(
+            val resBoard = BoardListResponse(
                 postId = board.postId,
                 nickName = board.nickName,
                 category = board.category,
@@ -558,7 +558,7 @@ class BoardService:BoardServiceIn {
             }else if(!param.title.isNullOrEmpty()){
                 TitleValueValidator.titleValidation(param.title!!)
                 param.title!!.forEach { multiLang ->
-                    multiLang.lang = multiLang.lang.lowercase()
+                    multiLang.lang = multiLang.lang.toLowerCase()
                 }
             }
             val boardAsync = async {
