@@ -177,4 +177,29 @@ class BoardServiceTest {
         assertThat(board.nickName).isEqualTo("redisMan")
     }
 
+
+    @Test
+    fun 단건_Value_입력() {
+        //given
+        val opsForValue = redisTemplate.opsForValue()
+        var resultMap: HashMap<String, *>?
+        runBlocking {
+            resultMap = boardService
+                .getBoardList("","","","","","",0,0,"","")
+                .awaitFirstOrDefault(null)
+        }
+        var boardList:ArrayList<BoardListResponse> = resultMap!!["data"] as ArrayList<BoardListResponse>
+
+
+        //when
+        for (boardListResponse in boardList) {
+            opsForValue.set(boardListResponse.postId,boardListResponse)
+        }
+
+        //then
+        val board = opsForValue.get(boardList[0].postId) as BoardListResponse
+        logger.info("board : $board")
+        assertThat(board.postId).isEqualTo(boardList[0].postId)
+    }
+
 }

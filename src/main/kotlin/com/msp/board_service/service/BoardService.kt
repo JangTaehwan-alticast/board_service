@@ -10,7 +10,6 @@ import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
 import com.msp.board_service.domain.response.BoardListResponse
 import com.msp.board_service.domain.response.BoardResponse
-import com.msp.board_service.domain.response.InsertBoardResponse
 import com.msp.board_service.exception.CustomException
 import com.msp.board_service.repository.BoardRepository
 import com.msp.board_service.repository.CommentRepository
@@ -34,6 +33,7 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Criteria.where
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 import org.springframework.util.StopWatch
 import reactor.core.publisher.Mono
@@ -48,6 +48,8 @@ interface BoardServiceIn {
     fun insertBoard(param: InsertBoardRequest): Mono<BoardListResponse>
     fun deleteBoard(postId:String):Mono<DeleteResult>
     fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
+    fun getBoardFromRedis(key:String):Mono<HashMap<String,*>>
+    fun insertBoardToRedis(Key:String,page: Long,size: Long):ArrayList<BoardListResponse>
 }
 
 @Service
@@ -57,16 +59,14 @@ class BoardService:BoardServiceIn {
 
     @Autowired
     lateinit var boardRepository: BoardRepository
-
     @Autowired
     lateinit var seqRepository: SequenceRepository
-
     @Autowired
     lateinit var historyRepository: HistoryRepository
-
     @Autowired
     lateinit var commentRepository: CommentRepository
-
+    @Autowired
+    lateinit var redisTemplate: RedisTemplate<String,Any>
     @Autowired
     lateinit var commonService: CommonService
 
@@ -90,7 +90,6 @@ class BoardService:BoardServiceIn {
             val regex = Regex("^post_[0-9]*")
             val matches = postId.matches(regex)
             if (!matches){
-                logger.error("설마 여기서 터지는거가")
                 throw CustomException.invalidPostId(postId)
             }
 
@@ -163,6 +162,16 @@ class BoardService:BoardServiceIn {
         val stopWatch = StopWatch("getBoardList")
         stopWatch.start("[getBoardList]Make Aggregation")
 
+        /**
+         * 게시글 리스트를 조회하기 앞서 파라미터를 모두 점검하고 빈값일 경우 Redis를 통해 return 한다
+         */
+        val params = (postId+category+nickName+title+contents+q+orderBy+lang)
+        val paging = page+size
+        if ( params.isEmpty() && paging <=0 ){
+            val key = "latestBoard"
+            return getBoardFromRedis(key)
+        }
+
         val listAggOps = ArrayList<AggregationOperation>()
         val countAggOps = ArrayList<AggregationOperation>()
 
@@ -170,7 +179,7 @@ class BoardService:BoardServiceIn {
          * Document 에서 필요한 field 정의
          * 다국어 처리도 같이 실행
          */
-        val project: ProjectionOperation = if(!lang.isNullOrEmpty()){
+        val project: ProjectionOperation = if(lang.isNotEmpty()){
             Aggregation.project(
                 "postId","nickName","title","category","createdDate","exposureDate","useYn","contents"
             ).and(
@@ -246,7 +255,7 @@ class BoardService:BoardServiceIn {
         val limitValue = if (size in 1..100) {
             size
         } else {
-            10L
+            30L
         }
         val skipValue = if (page > 0L) {
             (page - 1) * limitValue
@@ -330,6 +339,8 @@ class BoardService:BoardServiceIn {
             val stopWatch = StopWatch("insertBoard")
             stopWatch.start("[insertBoard]Insert Board")
 
+            val opsForList = redisTemplate.opsForList()
+            val opsForValue = redisTemplate.opsForValue()
             /**
              * title language lowercase 변환
              */
@@ -373,6 +384,12 @@ class BoardService:BoardServiceIn {
                 contents = board.contents,
                 createdDate = createdDate
             )
+
+            opsForList.rightPop("latestBoard")
+            opsForList.leftPush("latestBoard",resBoard)
+            var total = opsForValue.get("total") as Long
+            opsForValue.set("total",++total)
+
             stopWatch.stop()
             logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("insertBoard time : ${stopWatch.totalTimeMillis}ms.")
@@ -620,7 +637,7 @@ class BoardService:BoardServiceIn {
             update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
 
             stopWatch.stop()
-            logger.info("${stopWatch.prettyPrint()}")
+            logger.info(stopWatch.prettyPrint())
             logger.info("ELAPSE ${stopWatch.totalTimeMillis}ms.")
 
             boardRepository.modifyBoard(query, update).flatMap {
@@ -654,37 +671,37 @@ class BoardService:BoardServiceIn {
         val criteria = Criteria()
         val andCriteria = ArrayList<Criteria>()
         andCriteria.add(MakeWhereCriteria.makeWhereCriteria("exposureDate","le",now.toString(),"long"))
-        if(!postId.isNullOrEmpty()){
+        if(postId.isNotEmpty()){
             val paramValue = postId.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("postId",paramValue[0],paramValue[1]))
             }
         }
-        if(!category.isNullOrEmpty()){
+        if(category.isNotEmpty()){
             val paramValue = category.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("category",paramValue[0],paramValue[1]))
             }
         }
-        if(!nickName.isNullOrEmpty()){
+        if(nickName.isNotEmpty()){
             val paramValue = nickName.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("nickName",paramValue[0],paramValue[1]))
             }
         }
-        if(!title.isNullOrEmpty()){
+        if(title.isNotEmpty()){
             val paramValue = title.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("title.value",paramValue[0],paramValue[1]))
             }
         }
-        if(!contents.isNullOrEmpty()){
+        if(contents.isNotEmpty()){
             val paramValue = contents.split("?")
             if(paramValue.size == 2){
                 andCriteria.add(MakeWhereCriteria.makeWhereCriteria("contents",paramValue[0],paramValue[1]))
             }
         }
-        if(!q.isNullOrEmpty()){
+        if(q.isNotEmpty()){
             val qList = StringUtils.deleteWhitespace(q).split(",")
             val paramList = ArrayList<String>()
             var idx = -1
@@ -726,5 +743,49 @@ class BoardService:BoardServiceIn {
             criteria.andOperator(*andCriteria.toTypedArray())
         }
         return criteria
+    }
+
+    override fun getBoardFromRedis(key:String): Mono<HashMap<String, *>> {
+
+        val opsForList = redisTemplate.opsForList()
+        val opsForValue = redisTemplate.opsForValue()
+
+        val resultMap = HashMap<String,Any>()
+        resultMap["page"] = 0
+        resultMap["size"] = 30
+        val end = opsForList.size(key)
+
+        if (end <= 0){
+            val boardList = insertBoardToRedis(key, 0, 30)
+            resultMap["data"] = boardList
+        } else {
+            val boardList = opsForList.range(key,0,end) as ArrayList<*>
+            resultMap["data"] = boardList
+        }
+        resultMap["total"] = opsForValue.get("total")
+
+        return Mono.just(resultMap)
+    }
+
+    override fun insertBoardToRedis(key: String, page: Long, size: Long): ArrayList<BoardListResponse> {
+        val opsForList = redisTemplate.opsForList()
+        val opsForValue = redisTemplate.opsForValue()
+
+        var resultMap: HashMap<String, *>
+
+        runBlocking {
+            resultMap = getBoardList("","","","","","",page,size,"","")
+                .awaitFirst()
+        }
+
+        var boardList = resultMap["data"] as ArrayList<BoardListResponse>
+        var total = resultMap["total"]
+
+        opsForValue.set("total",total)
+        for (boardListResponse in boardList) {
+            opsForList.rightPush(key,boardListResponse)
+        }
+
+        return boardList
     }
 }
