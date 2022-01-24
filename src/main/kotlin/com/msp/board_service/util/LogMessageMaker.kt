@@ -65,7 +65,7 @@ class LogMessageMaker{
                 .getFunctionLog(
                     stopWatch = stopWatch,
                     serviceName = serviceName,
-                    function = function,
+                    function = function
                 )
         fun getSuccessLog(
             stopWatch: StopWatch, serviceName: String, function: String, result: String, value: Any, path:Any, param:Any

@@ -114,7 +114,7 @@ class HistoryService: HistoryServiceIn {
         val query = Query(where("historyId").`is`(historyId).and("type").`is`("PATCH"))
         return historyRepository.findExistHistoryBoard(query).flatMap {
             if(!it)
-                return@flatMap Mono.error(CustomException.invalidHistoryId(historyId))
+                return@flatMap error(CustomException.invalidHistoryId(historyId))
 
             stopWatch.stop()
             stopWatch.start("[getModHistoryBoard]Find Modify Board History And Convert To DTO")
@@ -161,7 +161,7 @@ class HistoryService: HistoryServiceIn {
         var commentList = ArrayList<Comment>()
         return historyRepository.findExistHistoryBoard(query).flatMap {
             if (!it)
-                return@flatMap Mono.error(CustomException.invalidPostId(postId))
+                return@flatMap error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
             stopWatch.start("[restoreDeletedBoard]Find Deleted Board From History Collection")

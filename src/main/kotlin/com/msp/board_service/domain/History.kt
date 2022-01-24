@@ -20,7 +20,7 @@ data class DeleteBoardHistory(
     var type: String? = null,                   //히스토리로 이동된 메서드 (DELETE)
     var board: Board? = null,                   //삭제된 원본글
     var comment: ArrayList<Comment>? = null,    //삭제된 원본글의 댓글 목록
-    var deletedDate: Long? = 0,                 //삭제된 날짜
+    var deletedDate: Long? = 0                 //삭제된 날짜
 )
 
 

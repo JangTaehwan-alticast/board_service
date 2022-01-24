@@ -15,7 +15,7 @@ data class Board(
     var useYn: String? = null,                  //노출/사용 여부
     var exposureDate: Long? = null,             //노출 예정 시각
     var createdDate: Long? = null,              //글 작성일
-    var lastUpdatedDate: Long? = null,          //마지막 업데이트일
+    var lastUpdatedDate: Long? = null           //마지막 업데이트일
 )
 
 
@@ -26,6 +26,6 @@ data class Comment(
     var nickName: String? = null,               //댓글 작성자
     var contents: String? = null,               //댓글 내용
     var createdDate: Long? = null,              //댓글 작성일
-    var lastUpdatedDate: Long? = null,          //마지막 업데이트일
+    var lastUpdatedDate: Long? = null           //마지막 업데이트일
 )
 

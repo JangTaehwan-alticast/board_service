@@ -68,7 +68,7 @@ class CommentService : CommentServiceIn {
 
         return boardRepository.findExistBoard(query).flatMap {
             if(!it)
-                return@flatMap Mono.error(CustomException.invalidPostId(postId))
+                return@flatMap error(CustomException.invalidPostId(postId))
 
             stopWatch.stop()
             stopWatch.start("[insertCmnt]Get Comment Sequence And Update")
@@ -101,7 +101,7 @@ class CommentService : CommentServiceIn {
                 commentId = commentId,
                 nickName = param.nickName,
                 contents = param.contents,
-                createdDate = createdDateRes,
+                createdDate = createdDateRes
             )
 
             stopWatch.stop()
@@ -230,7 +230,7 @@ class CommentService : CommentServiceIn {
         val query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
             if(!it)
-                return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
+                return@flatMap error(CustomException.invalidCommentId(commentId))
 
             stopWatch.stop()
             stopWatch.start("[deleteCmnt]Delete Comment From Collection")
@@ -268,7 +268,7 @@ class CommentService : CommentServiceIn {
         var query = Query(Criteria.where("commentId").`is`(commentId))
         return cmntRepository.findExistComment(query).flatMap {
             if(!it)
-                return@flatMap Mono.error(CustomException.invalidCommentId(commentId))
+                return@flatMap error(CustomException.invalidCommentId(commentId))
 
             stopWatch.stop()
             stopWatch.start("[modifyCmnt]Update Cmnt Collection")

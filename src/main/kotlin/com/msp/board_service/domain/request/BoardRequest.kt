@@ -18,7 +18,7 @@ data class InsertBoardRequest(
     @field:NotBlank(message = "내용을 입력하세요.")
     var contents: String,                                                       //게시글 내용
     var category: String? = null,                                               //카테고리 default all
-    var exposureDate: Long? =  null,                                            //노출 예정 시각
+    var exposureDate: Long? =  null                                            //노출 예정 시각
 
 )
 

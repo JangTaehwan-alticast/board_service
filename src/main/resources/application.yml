@@ -19,6 +19,11 @@ spring:
     loadbalancer:
       ribbon:
         enabled: false
+  redis:
+    host: localhost
+    port: 6379
+#    cluster:
+#      nodes: raidea-api-cache.vydr6n.clustercfg.apn2.cache.amazonaws.com:6349
 
 eureka:
   instance:
@@ -26,11 +31,13 @@ eureka:
     lease-renewal-interval-in-seconds: 1 # Discovery 에 1초마다 하트비트 전송
     lease-expiration-duration-in-seconds: 2 # Discovery 는 서비스 등록 해제 전 마지막 하트비트로부터 2초 기다림
   client:
-    enabled: true
+    enabled: false
     register-with-eureka: true # 유레카에 서비스 등록
     fetch-registry: true # 유레카 서비스 위치
-    service-url:
-      defaultZone: http://localhost:8761/eureka
+    serviceUrl:
+      defaultZone: http://host.docker.internal:8761/eureka
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka
     registry-fetch-interval-seconds: 30
 
 info:

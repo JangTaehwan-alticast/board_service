@@ -15,7 +15,7 @@ import javax.validation.Payload
     AnnotationTarget.ANNOTATION_CLASS,
     AnnotationTarget.CLASS,
     AnnotationTarget.CONSTRUCTOR,
-    AnnotationTarget.VALUE_PARAMETER,
+    AnnotationTarget.VALUE_PARAMETER
 )
 @Retention(
     RetentionPolicy.RUNTIME

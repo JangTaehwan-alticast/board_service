@@ -1,6 +1,7 @@
 package com.msp.board_service.handler
 
 import com.msp.board_service.config.CodeConfig
+import com.msp.board_service.config.redis.RedisConfig
 import com.msp.board_service.domain.request.InsertBoardRequest
 import com.msp.board_service.domain.request.ModBoardRequest
 import com.msp.board_service.exception.CustomException
@@ -8,6 +9,7 @@ import com.msp.board_service.response.Response
 import com.msp.board_service.service.BoardService
 import com.msp.board_service.util.LogMessageMaker
 import org.slf4j.LoggerFactory
+import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Component
 import org.springframework.util.StopWatch
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -162,10 +164,12 @@ class BoardHandler(val boardService: BoardService) {
         return req.bodyToMono(InsertBoardRequest::class.java).flatMap { insertBoardRequest ->
             val validator = Validation.buildDefaultValidatorFactory().validator.validate(insertBoardRequest)
             if(validator.isNotEmpty())
-                return@flatMap Mono.error(CustomException.validation(
-                    message = validator.first().message,
-                    field = validator.first().propertyPath
-                ))
+                return@flatMap error(
+                    CustomException.validation(
+                        message = validator.first().message,
+                        field = validator.first().propertyPath
+                    )
+                )
             this.boardService.insertBoard(insertBoardRequest)
         }.flatMap {
             var logMsg = LogMessageMaker.getSuccessLog(
@@ -252,7 +256,7 @@ class BoardHandler(val boardService: BoardService) {
         }.flatMap { modBoardRequest ->
             val validator = Validation.buildDefaultValidatorFactory().validator.validate(modBoardRequest)
             if(validator.isNotEmpty())
-                return@flatMap Mono.error(CustomException.validation(
+                return@flatMap error(CustomException.validation(
                     message = validator.first().message,
                     field = validator.first().propertyPath
                 ))
