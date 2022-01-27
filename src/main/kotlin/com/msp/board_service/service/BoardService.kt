@@ -3,6 +3,7 @@ package com.msp.board_service.service
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.msp.board_service.common.customValidation.TitleValueValidator
+import com.msp.board_service.config.RedisKey
 import com.msp.board_service.domain.Board
 import com.msp.board_service.domain.DeleteBoardHistory
 import com.msp.board_service.domain.ModifyBoardHistory
@@ -37,19 +38,21 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 import org.springframework.util.StopWatch
 import reactor.core.publisher.Mono
+import java.util.concurrent.TimeUnit
 
 
 interface BoardServiceIn {
-    fun getOneBoard(postId:String):Mono<BoardResponse>
+    fun getOneBoard(postId: String):Mono<BoardResponse>
     fun getBoardList(
         postId: String, category: String, nickName: String, title: String,
         contents: String, q: String, page: Long, size: Long, orderBy: String, lang: String
     ):Mono<HashMap<String,*>>
     fun insertBoard(param: InsertBoardRequest): Mono<BoardListResponse>
-    fun deleteBoard(postId:String):Mono<DeleteResult>
-    fun modifyBoard(postId:String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
-    fun getBoardFromRedis(key:String):Mono<HashMap<String,*>>
-    fun insertBoardToRedis(Key:String,page: Long,size: Long):ArrayList<BoardListResponse>
+    fun deleteBoard(postId: String):Mono<DeleteResult>
+    fun modifyBoard(postId: String, modBoardDTO: ModBoardRequest):Mono<UpdateResult>
+    fun getBoardFromRedis(key: String, page: Long, size: Long):Mono<HashMap<String,*>>
+    fun insertBoardToRedis(Key: String, page: Long, size: Long):ArrayList<BoardListResponse>
+    fun updateRedisStatus(postId: String?, boardResponse: BoardResponse?, boardListResponse: BoardListResponse?, flag: String)
 }
 
 @Service
@@ -75,16 +78,30 @@ class BoardService:BoardServiceIn {
      * @param postId 조회하고자 하는 게시글의 아이디
      *
      * @suppress 1. 게시글이 존재하는지 확인
-     * 2. 응답 전용 시간 변환 (epoch time -> yyyy-MM-dd'T'HH:mm:ss)
-     * 3. 요청 게시글 반환
+     * 2. redis 캐시 데이터 확인
+     * 3. 응답 전용 시간 변환 (epoch time -> yyyy-MM-dd'T'HH:mm:ss)
+     * 4. 요청 게시글 반환
      *
      * @exception CustomException.invalidPostId 유효하지 않은 postId 인 경우
      */
     override fun getOneBoard(postId: String): Mono<BoardResponse> {
         return runBlocking {
-            logger.info("getOneBoard Param : $postId")
-
             val stopWatch = StopWatch("getOneBoard")
+            logger.info("getOneBoard Param : $postId")
+            stopWatch.start("[getOneBoard]Find Board From Redis")
+
+            /**
+             * 단건조회시 redis 확인 후 있으면 return
+             */
+            val opsForValue = redisTemplate.opsForValue()
+
+            opsForValue.get(postId)?.let {
+                stopWatch.stop()
+                logger.info("[getOneBoard]Return from redis : $postId")
+                return@runBlocking Mono.just(it as BoardResponse)
+            }
+
+            stopWatch.stop()
             stopWatch.start("[getOneBoard]Find Board From Collection")
 
             val regex = Regex("^post_[0-9]*")
@@ -116,9 +133,10 @@ class BoardService:BoardServiceIn {
                 createdDate = createdDate,
                 lastUpdatedDate = lastUpdatedDate
             )
-            stopWatch.stop()
+            opsForValue.set(postId,boardResponse,86400L,TimeUnit.SECONDS)
 
-            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+            stopWatch.stop()
+            logger.debug("[getOneBoard]${stopWatch.prettyPrint()}")
             logger.info("getOneBoard time : ${stopWatch.totalTimeMillis}ms.")
             Mono.just(boardResponse)
         }
@@ -138,11 +156,12 @@ class BoardService:BoardServiceIn {
      * @param orderBy 정렬 기준
      * @param lang 다국어 조회(제목)
      *
-     * @suppress 1. 조회 할 필드 project 추가(lang 입력시 해당 언어 추가 default all)
-     * 2. Criteria 생성. 노출예약을 고려해서 현재시각 > exposureDate 조건 추가
-     * 3. 검색 parameter 값 존재하면 해당 Criteria 추가
-     * 4. paging 처리 후 게시글 count
-     * 5. 검색 조건에 따른 결과 반환
+     * @suppress 1. parameter & paging 점검 후 Redis 캐시 확인
+     * 2. 조회 할 필드 project 추가(lang 입력시 해당 언어 추가 default all)
+     * 3. Criteria 생성. 노출예약을 고려해서 현재시각 > exposureDate 조건 추가
+     * 4. 검색 parameter 값 존재하면 해당 Criteria 추가
+     * 5. paging 처리 후 게시글 count
+     * 6. 검색 조건에 따른 결과 반환
      */
     override fun getBoardList(
         postId: String,
@@ -160,17 +179,29 @@ class BoardService:BoardServiceIn {
             "getBoardList Param : postId= $postId, category= $category, nickName= $nickName, title= $title," +
                     " contents= $contents, q= $q, page= $page, size= $size, orderBy= $orderBy, lang= $lang")
         val stopWatch = StopWatch("getBoardList")
-        stopWatch.start("[getBoardList]Make Aggregation")
+        stopWatch.start("[getOneBoard]Find BoardList From Redis")
 
         /**
          * 게시글 리스트를 조회하기 앞서 파라미터를 모두 점검하고 빈값일 경우 Redis를 통해 return 한다
          */
         val params = (postId+category+nickName+title+contents+q+orderBy+lang)
-        val paging = page+size
-        if ( params.isEmpty() && paging <=0 ){
-            val key = "latestBoard"
-            return getBoardFromRedis(key)
+        val paging = if (page<=0) {
+            1 * size
+        } else {
+            page * size
         }
+
+        if (params.isEmpty() && paging <= 100) {
+            val key = RedisKey.LATEST_BOARD
+            return getBoardFromRedis(key, page, size).doFinally {
+                stopWatch.stop()
+                logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+                logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
+            }
+        }
+
+        stopWatch.stop()
+        stopWatch.start("[getBoardList]Make Aggregation")
 
         val listAggOps = ArrayList<AggregationOperation>()
         val countAggOps = ArrayList<AggregationOperation>()
@@ -244,18 +275,18 @@ class BoardService:BoardServiceIn {
 
         /**
          * paging 처리
-         * default : page 0, size 10(limit 100)
+         * default : page 0, size 10(limit 200)
          */
-        if (size < 0L || size > 100L){
+        if (size < 0L || size > 200L){
             throw CustomException.invalidSizeRange()
         }else if (page < 0L){
             throw CustomException.invalidPageRange()
         }
 
-        val limitValue = if (size in 1..100) {
+        val limitValue = if (size in 1..200) {
             size
         } else {
-            30L
+            10L
         }
         val skipValue = if (page > 0L) {
             (page - 1) * limitValue
@@ -271,7 +302,7 @@ class BoardService:BoardServiceIn {
 
         stopWatch.stop()
         stopWatch.start("[getBoardList]Count Board")
-        logger.info("query = $listAgg")
+        logger.info("[getBoardList]query = $listAgg")
         return boardRepository.findBoardMapList(Aggregation.newAggregation(countAggOps)).collectList().flatMap { countMap ->
             stopWatch.stop()
             stopWatch.start("[getBoardList]Find Board List")
@@ -308,13 +339,13 @@ class BoardService:BoardServiceIn {
                     resultMap["data"] = boardList
 
                     stopWatch.stop()
-                    logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+                    logger.debug("[getBoardList]${stopWatch.prettyPrint()}")
                     logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
                     Mono.just(resultMap)
                 }
             }else{
                 stopWatch.stop()
-                logger.debug("[BoardService]${stopWatch.prettyPrint()}")
+                logger.debug("[getBoardList]${stopWatch.prettyPrint()}")
                 logger.info("getBoardList time: ${stopWatch.totalTimeMillis}ms.")
                 resultMap["data"] = ArrayList<BoardListResponse>()
                 Mono.just(resultMap)
@@ -330,8 +361,7 @@ class BoardService:BoardServiceIn {
      * @suppress 1.board seq 생성 및 boardId 부여
      * 2. 노출시각 예약이 존재할 경우 반영 없으면 현재시각으로 설정
      * 3. board collection 게시글 document 삽입
-     *
-     * @exception CustomException.validation 필드의 maxValue 초과시
+     * 4. Redis 게시글 리스트 update
      */
     override fun insertBoard(param: InsertBoardRequest): Mono<BoardListResponse> {
         return runBlocking {
@@ -339,8 +369,6 @@ class BoardService:BoardServiceIn {
             val stopWatch = StopWatch("insertBoard")
             stopWatch.start("[insertBoard]Insert Board")
 
-            val opsForList = redisTemplate.opsForList()
-            val opsForValue = redisTemplate.opsForValue()
             /**
              * title language lowercase 변환
              */
@@ -374,7 +402,6 @@ class BoardService:BoardServiceIn {
             board.postId = "post_${seq.await().seq}"
             boardRepository.insertBoard(board).awaitFirst()
 
-
             val createdDate = CommonService.epochToString(board.createdDate!!)
             val resBoard = BoardListResponse(
                 postId = board.postId,
@@ -384,13 +411,14 @@ class BoardService:BoardServiceIn {
                 contents = board.contents,
                 createdDate = createdDate
             )
-
-            opsForList.rightPop("latestBoard")
-            opsForList.leftPush("latestBoard",resBoard)
-            var total = opsForValue.get("total") as Long
-            opsForValue.set("total",++total)
-
             stopWatch.stop()
+            /**
+             * update redis status
+             */
+            stopWatch.start("[insertBoard]Update Redis Status")
+            updateRedisStatus(null,null,resBoard,"create")
+            stopWatch.stop()
+
             logger.debug("[BoardService]${stopWatch.prettyPrint()}")
             logger.info("insertBoard time : ${stopWatch.totalTimeMillis}ms.")
             Mono.just(resBoard)
@@ -406,6 +434,7 @@ class BoardService:BoardServiceIn {
      * 2. history 의 seq 생성 및 historyId 부여
      * 3. 해당 게시글의 postId 를 가지고 있는 댓글과 게시글 history collection 이동
      * 4. 기존 댓글, 게시글 삭제
+     * 5. Redis status 변경
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      */
     override fun deleteBoard(postId:String):Mono<DeleteResult> {
@@ -437,9 +466,17 @@ class BoardService:BoardServiceIn {
             val commentList = async {
                 commentRepository.findAllComment(query).collectList().awaitFirstOrDefault(null)
             }
-
-
             val insertedBoard = board.await()
+
+            stopWatch.stop()
+            /**
+             * update redis status
+             */
+            stopWatch.start("[deleteBoard]Update Redis Status")
+            updateRedisStatus(insertedBoard.postId,null,null,"delete")
+            stopWatch.stop()
+
+            stopWatch.start("[deleteBoard]Update boardHistory & Delete Board")
             deleteBoardHistory.type = "DELETE"
             deleteBoardHistory.board = insertedBoard
             deleteBoardHistory.postId = insertedBoard.postId
@@ -453,6 +490,10 @@ class BoardService:BoardServiceIn {
                 boardRepository.deleteBoard(query)
             }.flatMap {
                 Mono.just(it)
+            }.doFinally {
+                stopWatch.stop()
+                logger.debug("[deleteBoard]${stopWatch.prettyPrint()}")
+                logger.info("deleteBoard time : ${stopWatch.totalTimeMillis}ms.")
             }
         }
     }
@@ -467,105 +508,15 @@ class BoardService:BoardServiceIn {
      * 3. history collection 에 현재 존재하는 버전 count 후 version 부여
      * 4. history collection 에 PATCH type 으로 document 생성
      * 5. 기존 게시물 수정
-     * @exception CustomException.invalidParameter modifier 누락시
+     * @exception CustomException.validation 파라미터 유효성 검사
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
+     * @exception IllegalStateException Unexpected Server error
      */
-//    override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
-//        logger.info("modifyBoard param : postId= $postId, $param")
-//        var stopWatch = StopWatch("modifyBoard")
-//        stopWatch.start("[modifyBoard]Validation Param")
-//
-//        val query = Query(where("postId").`is`(postId))
-//        var modifyBoardHistory = ModifyBoardHistory()
-//
-//        return boardRepository.findExistBoard(query).flatMap {
-//            if(!it){
-//                return@flatMap Mono.error(CustomException.invalidPostId(postId))
-//            }else if(!param.contents.isNullOrEmpty() && param.contents!!.length > 255){
-//                return@flatMap Mono.error(CustomException.validation(message = "길이가 0에서 255 사이여야 합니다",field = "contents"))
-//            }else if(!param.title.isNullOrEmpty()){
-//                TitleValueValidator.titleValidation(param.title!!)
-//                param.title!!.forEach { multiLang ->
-//                    multiLang.lang = multiLang.lang.lowercase()
-//                }
-//            }
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Get History Sequence And Update")
-//
-//            seqRepository.getNextSeqIdUpdateInc("history")
-//        }.flatMap { seq ->
-//            modifyBoardHistory.historyId = "history_${seq.seq}"
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Board Version Count And Update")
-//
-//            getCountHistoryBoard(postId,"PATCH")
-//        }.flatMap { verCnt ->
-//            modifyBoardHistory.version = "V${verCnt+1}.0"
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Get Single Board For Update")
-//
-//            boardRepository.findOneBoard(query)
-//        }.flatMap { board ->
-//            val createdDate = CommonService.epochToString(board.createdDate!!)
-//            var lastUpdatedDate = if(board.lastUpdatedDate != null) {
-//                CommonService.epochToString(board.lastUpdatedDate!!)
-//            }else{
-//                ""
-//            }
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Convert Board To DTO And ModifyBoardHistory")
-//
-//            var boardRes = BoardResponse(
-//                postId = board.postId,
-//                nickName = board.nickName,
-//                category = board.category,
-//                title = board.title,
-//                contents = board.contents,
-//                createdDate = createdDate,
-//                lastUpdatedDate = lastUpdatedDate
-//            )
-//            modifyBoardHistory.board = boardRes
-//            modifyBoardHistory.postId = board.postId
-//            modifyBoardHistory.type = "PATCH"
-//            modifyBoardHistory.updatedDate = LocalDateTime.now(ZoneOffset.UTC).atZone(ZoneOffset.UTC).toEpochSecond()
-//            modifyBoardHistory.modifier = param.modifier
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Insert History Collection")
-//
-//            historyRepository.insertBoardHistory(modifyBoardHistory)
-//        }.flatMap {
-//
-//            stopWatch.stop()
-//            stopWatch.start("[modifyBoard]Update Board Collection")
-//
-//            var update = Update()
-//            param.title?.let {
-//                update.set("title",param.title)
-//            }
-//            param.contents?.let {
-//                update.set("contents",param.contents)
-//            }
-//            update.set("modifier",param.modifier)
-//            update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
-//            val modifyBoard = boardRepository.modifyBoard(query, update)
-//
-//            stopWatch.stop()
-//            logger.debug("[BoardService]${stopWatch.prettyPrint()}")
-//            logger.info("modifyBoard time : ${stopWatch.totalTimeMillis}ms.")
-//
-//            modifyBoard
-//        }
-//    }
     override fun modifyBoard(postId:String, param: ModBoardRequest):Mono<UpdateResult>{
         return runBlocking {
             logger.info("modifyBoard param : postId= $postId, $param")
             val stopWatch = StopWatch("modifyBoard")
-            stopWatch.start("[modifyBoard]Start Modify Board")
+            stopWatch.start("[modifyBoard]Update boardHistory")
 
             val query = Query(where("postId").`is`(postId))
             val modifyBoardHistory = ModifyBoardHistory()
@@ -594,7 +545,6 @@ class BoardService:BoardServiceIn {
                 }
             }
 
-
             val board = boardAsync.await()
 
             val createdDate = CommonService.epochToString(board.createdDate!!)
@@ -620,6 +570,7 @@ class BoardService:BoardServiceIn {
             modifyBoardHistory.historyId = "history_${seq.await().seq}"
             modifyBoardHistory.version = "V${verCnt.await()+1}.0"
 
+
             withContext(Dispatchers.IO){
                 historyRepository.insertBoardHistory(modifyBoardHistory).awaitFirstOrElse {
                     throw IllegalStateException("ServerError")
@@ -628,20 +579,31 @@ class BoardService:BoardServiceIn {
 
             val update = Update()
             param.title?.let {
+                boardRes.title = param.title
                 update.set("title",param.title)
             }
             param.contents?.let {
+                boardRes.contents = param.contents
                 update.set("contents",param.contents)
             }
             update.set("modifier",param.modifier)
             update.set("lastUpdatedDate",modifyBoardHistory.updatedDate)
 
             stopWatch.stop()
-            logger.info(stopWatch.prettyPrint())
-            logger.info("ELAPSE ${stopWatch.totalTimeMillis}ms.")
+            /**
+             * update redis status
+             */
+            stopWatch.start("[modifyBoard]Update Redis Status")
+            updateRedisStatus(null,boardRes,null,"update")
+            stopWatch.stop()
+            stopWatch.start("[modifyBoard]Update Board")
 
             boardRepository.modifyBoard(query, update).flatMap {
                 Mono.just(it)
+            }.doFinally {
+                stopWatch.stop()
+                logger.debug("[modifyBoard]${stopWatch.prettyPrint()}")
+                logger.info("modifyBoard time : ${stopWatch.totalTimeMillis}ms.")
             }
         }
     }
@@ -745,29 +707,50 @@ class BoardService:BoardServiceIn {
         return criteria
     }
 
-    override fun getBoardFromRedis(key:String): Mono<HashMap<String, *>> {
+    override fun getBoardFromRedis(key:String, page: Long, size: Long): Mono<HashMap<String, *>> {
+        logger.info("[getBoardFromRedis]Find boardList from redis")
+
+        if (size < 0L || size > 200L){
+            throw CustomException.invalidSizeRange()
+        }else if (page < 0L){
+            throw CustomException.invalidPageRange()
+        }
 
         val opsForList = redisTemplate.opsForList()
         val opsForValue = redisTemplate.opsForValue()
-
         val resultMap = HashMap<String,Any>()
-        resultMap["page"] = 0
-        resultMap["size"] = 30
-        val end = opsForList.size(key)
 
-        if (end <= 0){
-            val boardList = insertBoardToRedis(key, 0, 30)
-            resultMap["data"] = boardList
+        val limitValue = if (size in 1..100) {
+            size.toInt()
         } else {
-            val boardList = opsForList.range(key,0,end) as ArrayList<*>
-            resultMap["data"] = boardList
+            10
         }
-        resultMap["total"] = opsForValue.get("total")
+        val skipValue = if (page > 0L) {
+            ((page - 1) * limitValue).toInt()
+        } else {
+            0
+        }
+
+        resultMap["page"] = page
+        resultMap["size"] = limitValue
+        val boardSize = opsForList.size(key)
+
+        if (boardSize < 100){
+            val boardList = insertBoardToRedis(key, 0, 200)
+            resultMap["data"] = boardList.subList(skipValue,skipValue+limitValue)
+        } else {
+            val boardList = opsForList.range(key,0,boardSize) as ArrayList<*>
+            resultMap["data"] = boardList.subList(skipValue,skipValue+limitValue)
+        }
+        resultMap["total"] = opsForValue.get(RedisKey.TOTAL)
 
         return Mono.just(resultMap)
     }
 
     override fun insertBoardToRedis(key: String, page: Long, size: Long): ArrayList<BoardListResponse> {
+        logger.info("[insertBoardToRedis]start insert boardList to redis")
+        redisTemplate.delete(key)
+
         val opsForList = redisTemplate.opsForList()
         val opsForValue = redisTemplate.opsForValue()
 
@@ -779,13 +762,70 @@ class BoardService:BoardServiceIn {
         }
 
         var boardList = resultMap["data"] as ArrayList<BoardListResponse>
-        var total = resultMap["total"]
+        var total = resultMap["total"].toString().toInt()
 
-        opsForValue.set("total",total)
+        opsForValue.set(RedisKey.TOTAL,total)
+
         for (boardListResponse in boardList) {
             opsForList.rightPush(key,boardListResponse)
         }
-
+        //게시글 리스트 유효시간 60s * 60h * 24h * 1d = 86400s
+        redisTemplate.expire(key,86400L, TimeUnit.SECONDS)
         return boardList
+    }
+
+    override fun updateRedisStatus(postId: String?, boardResponse: BoardResponse?, boardListResponse: BoardListResponse?, flag: String) {
+        logger.info("[updateRedisStatus]reason : $flag")
+        val opsForValue = redisTemplate.opsForValue()
+        val opsForList = redisTemplate.opsForList()
+
+        when (flag){
+            "create" ->{
+                var total = opsForValue.get(RedisKey.TOTAL).toString().toInt()
+                opsForValue.set(RedisKey.TOTAL,++total)
+                opsForList.rightPop(RedisKey.LATEST_BOARD)
+                opsForList.leftPush(RedisKey.LATEST_BOARD,boardListResponse)
+            }
+            "delete" ->{
+                var boardListResponse: BoardListResponse? = null
+                val size = opsForList.size(RedisKey.LATEST_BOARD)
+                val boardList = opsForList.range(RedisKey.LATEST_BOARD, 0, size) as ArrayList<BoardListResponse>
+                boardList.map {
+                    if (postId.equals(it.postId))
+                        boardListResponse = it
+                }
+                var total = opsForValue.get(RedisKey.TOTAL).toString().toInt()
+                opsForValue.set(RedisKey.TOTAL,--total)
+                opsForList.remove(RedisKey.LATEST_BOARD,1,boardListResponse)
+                redisTemplate.delete(postId)
+            }
+            "update" ->{
+                opsForValue.set(boardResponse!!.postId,boardResponse)
+
+                val modBrdListRes = BoardListResponse(
+                    postId = boardResponse.postId,
+                    contents = boardResponse.contents,
+                    title = boardResponse.title,
+                    nickName = boardResponse.nickName,
+                    createdDate = boardResponse.createdDate,
+                    category = boardResponse.category
+                )
+
+                var brdListRes: BoardListResponse? = null
+                val size = opsForList.size(RedisKey.LATEST_BOARD)
+                val boardList = opsForList.range(RedisKey.LATEST_BOARD, 0, size) as ArrayList<BoardListResponse>
+
+                boardList.map {
+                    if (boardResponse.postId.equals(it.postId))
+                        brdListRes = it
+                }
+
+                if (brdListRes != null){
+                    val idx = boardList.indexOf(brdListRes!!).toLong()
+                    opsForList.remove(RedisKey.LATEST_BOARD,1,brdListRes)
+                    opsForList.set(RedisKey.LATEST_BOARD,idx,modBrdListRes)
+                }
+            }
+        }
     }
 }

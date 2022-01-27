@@ -27,18 +27,16 @@ class RedisConfig {
     lateinit var env: Environment
 
 //    @Value("{spring.redis.host}")
-    var host: String = "localhost"
+    val host: String = "host.docker.internal"// docker -> host.docker.internal
 
-//    @Value("{spring.redis.port}")
-    var port: Int = 6379
 
 
     @Bean
     fun redisConnectionFactory(): RedisConnectionFactory {
-        val conf = RedisStandaloneConfiguration(host,port)
+        val conf = RedisStandaloneConfiguration(redisProperties.host,6379)
         return LettuceConnectionFactory(conf)
 //        return if(env.activeProfiles.contains("local")) {
-//            // VM Option: -Dspring.profiles.active = local
+//             VM Option: -Dspring.profiles.active = local
 //            val conf = RedisStandaloneConfiguration(redisProperties.host, 6379)
 //            LettuceConnectionFactory(conf)
 //        }else {

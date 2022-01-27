@@ -24,6 +24,11 @@ spring:
     port: 6379
 #    cluster:
 #      nodes: raidea-api-cache.vydr6n.clustercfg.apn2.cache.amazonaws.com:6349
+    # aws instance name: dev-test-auth-mongo
+#    host: 3.35.210.156
+#    port: 26379
+#    cluster: # prod에서 nodes가 달라짐 확인 후 변경 필요
+#      nodes: raidea-api-cache.vydr6n.clustercfg.apn2.cache.amazonaws.com:6379
 
 eureka:
   instance:
@@ -36,7 +41,6 @@ eureka:
     fetch-registry: true # 유레카 서비스 위치
     serviceUrl:
 #      defaultZone: http://host.docker.internal:8761/eureka
-#    service-url:
       defaultZone: http://localhost:8761/eureka
     registry-fetch-interval-seconds: 30
 

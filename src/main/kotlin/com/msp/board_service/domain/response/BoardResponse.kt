@@ -5,7 +5,12 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.redis.core.RedisHash
 import java.io.Serializable
 
+/**
+ * 60s * 60m * 24h * 7d
+ */
+@RedisHash(timeToLive = 10L)
 data class BoardResponse(
+    @Id
     var postId: String? = null,                     //게시글 아이디
     var nickName: String? = null,                   //게시글 작성자
     var category: String? = null,                   //카테고리
@@ -13,7 +18,7 @@ data class BoardResponse(
     var contents: String? = null,                   //게시글 내용
     var createdDate: String? = null,                //작성일
     var lastUpdatedDate: String? = null            //마지막 업데이트일
-)
+):Serializable
 
 data class InsertBoardResponse(
     var postId: String? = null,                     //입력한 게시글의 아이디
@@ -23,7 +28,7 @@ data class InsertBoardResponse(
     var contents: String? = null,                   //게시글 내용
     var createdDate: String? = null                //게시글 작성일
 )
-@RedisHash
+@RedisHash(timeToLive = 10L)
 data class BoardListResponse(
     @Id
     var postId: String? = null,                     //게시글 아이디
