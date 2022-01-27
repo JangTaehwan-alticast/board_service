@@ -14,6 +14,13 @@ object LangCodeConfig{
     val LANG_CODE_SET = setOf("ar", "zh", "en", "de", "fr", "ja", "ko", "ru")
 }
 
+object RedisKey{
+    const val LATEST_BOARD = "latestBoard"
+    const val TOTAL = "total"
+    const val SINGLE_BOARD = "singleBoard"
+}
+
+
 object DefaultCode{
     const val FALLBACK_LANG = "en"
 }
