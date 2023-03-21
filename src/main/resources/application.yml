@@ -47,7 +47,7 @@ info:
     name: Board Service
     description: Board Service
     test : local
-    version: 1.0.0
+    version: 1.0.1
 
 logging:
   file:
