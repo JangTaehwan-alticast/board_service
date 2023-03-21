@@ -438,7 +438,7 @@ class BoardService:BoardServiceIn {
      * @exception CustomException.invalidPostId 유효하지 않은 postId 입력시
      */
     override fun deleteBoard(postId:String):Mono<DeleteResult> {
-        return runBlocking {
+
             logger.info("deleteBoard param : $postId")
             val stopWatch = StopWatch("deleteBoard")
             stopWatch.start("[deleteBoard]Start Delete Board")
@@ -450,44 +450,35 @@ class BoardService:BoardServiceIn {
 
             val query = Query(where("postId").`is`(postId))
             val deleteBoardHistory = DeleteBoardHistory()
+            return Mono.zip(
+                boardRepository.findOneBoard(query),
+                seqRepository.getNextSeqIdUpdateInc("history"),
+                commentRepository.findAllComment(query).collectList()).flatMap {
+            val board = it.t1
+            val seq = it.t2
+            val commentList = it.t3
 
-            val board = async {
-                boardRepository.findOneBoard(query).awaitFirstOrElse {
-                    throw CustomException.invalidPostId(postId)
-                }
-            }
-
-            val seq = async {
-                seqRepository.getNextSeqIdUpdateInc("history").awaitFirstOrElse {
-                    throw IllegalStateException("ServerError")
-                }
-            }
-
-            val commentList = async {
-                commentRepository.findAllComment(query).collectList().awaitFirstOrDefault(null)
-            }
-            val insertedBoard = board.await()
 
             stopWatch.stop()
             /**
              * update redis status
              */
             stopWatch.start("[deleteBoard]Update Redis Status")
-            updateRedisStatus(insertedBoard.postId,null,null,"delete")
+            updateRedisStatus(board.postId,null,null,"delete")
             stopWatch.stop()
 
             stopWatch.start("[deleteBoard]Update boardHistory & Delete Board")
             deleteBoardHistory.type = "DELETE"
-            deleteBoardHistory.board = insertedBoard
-            deleteBoardHistory.postId = insertedBoard.postId
+            deleteBoardHistory.board = board
+            deleteBoardHistory.postId = board.postId
             deleteBoardHistory.deletedDate = CommonService.getNowEpochTime()
-            deleteBoardHistory.historyId = "history_${seq.await().seq}"
-            deleteBoardHistory.comment = commentList.await().toCollection(ArrayList())
+            deleteBoardHistory.historyId = "history_${seq.seq}"
+            deleteBoardHistory.comment = commentList.toCollection(ArrayList())
 
-            withContext(Dispatchers.IO) {
-                commentRepository.deleteComment(query)
-                historyRepository.insertBoardHistory(deleteBoardHistory)
-                boardRepository.deleteBoard(query)
+
+            commentRepository.deleteComment(query).subscribe()
+            historyRepository.insertBoardHistory(deleteBoardHistory).subscribe()
+            boardRepository.deleteBoard(query)
             }.flatMap {
                 Mono.just(it)
             }.doFinally {
@@ -496,7 +487,6 @@ class BoardService:BoardServiceIn {
                 logger.info("deleteBoard time : ${stopWatch.totalTimeMillis}ms.")
             }
         }
-    }
 
     /**
      * 게시글 수정
